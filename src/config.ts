@@ -1,8 +1,6 @@
 import { config as loadEnv } from 'dotenv';
 import { z } from 'zod';
 
-loadEnv();
-
 const envSchema = z.object({
   NODE_ENV: z
     .enum(['development', 'test', 'production'])
@@ -16,4 +14,7 @@ export function parseEnv(input: Record<string, string | undefined>): Env {
   return envSchema.parse(input);
 }
 
-export const env = parseEnv(process.env);
+export function loadRuntimeEnv(): Env {
+  loadEnv();
+  return parseEnv(process.env);
+}
