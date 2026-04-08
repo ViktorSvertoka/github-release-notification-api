@@ -6,6 +6,12 @@ import { loadRuntimeEnv } from './config.js';
 import { createDbClient } from './db/client.js';
 import { runMigrations } from './db/migrate.js';
 import { HttpGitHubRepositoryClient } from './github/github-repository-client.js';
+import {
+  NoopEmailNotifier,
+  SmtpEmailNotifier,
+} from './notifier/email-notifier.js';
+import { ReleaseScanner } from './scanner/release-scanner.js';
+import { startScannerScheduler } from './scanner/scanner-scheduler.js';
 import { PostgresSubscriptionRepository } from './subscriptions/subscription-repository.js';
 import { SubscriptionService } from './subscriptions/subscription-service.js';
 
@@ -30,10 +36,30 @@ async function bootstrap(): Promise<void> {
     subscriptionRepository,
     gitHubClient
   );
+  const emailNotifier =
+    env.SMTP_HOST && env.SMTP_USER && env.SMTP_PASS && env.SMTP_FROM
+      ? new SmtpEmailNotifier(env)
+      : new NoopEmailNotifier();
+  const releaseScanner = new ReleaseScanner(
+    subscriptionRepository,
+    gitHubClient,
+    emailNotifier,
+    logger
+  );
+  const scannerScheduler = startScannerScheduler({
+    scanner: releaseScanner,
+    intervalSeconds: env.SCAN_INTERVAL_SECONDS,
+    onError: error => {
+      logger.error({ error }, 'Release scanner iteration failed');
+    },
+  });
 
   const app = createApp({ subscriptionService });
   const server = app.listen(env.PORT, () => {
-    logger.info({ port: env.PORT }, 'Server started');
+    logger.info(
+      { port: env.PORT, scanIntervalSeconds: env.SCAN_INTERVAL_SECONDS },
+      'Server started'
+    );
   });
 
   let isShuttingDown = false;
@@ -43,6 +69,7 @@ async function bootstrap(): Promise<void> {
     }
     isShuttingDown = true;
     logger.info({ signal }, 'Graceful shutdown started');
+    scannerScheduler.stop();
 
     await new Promise<void>((resolve, reject) => {
       server.close(error => {

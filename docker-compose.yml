@@ -11,6 +11,7 @@ services:
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/release_notifications?sslmode=disable
       REDIS_URL: redis://redis:6379
       CACHE_TTL_SECONDS: 600
+      SCAN_INTERVAL_SECONDS: 300
       GITHUB_TOKEN: ${GITHUB_TOKEN:-}
     depends_on:
       postgres:

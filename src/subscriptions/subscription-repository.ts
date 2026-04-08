@@ -16,6 +16,12 @@ export interface Subscription {
   unsubscribeToken: string;
 }
 
+export interface TrackedRepository {
+  repository: string;
+  lastSeenTag: string | null;
+  subscriberEmails: string[];
+}
+
 export interface SubscriptionRepository {
   upsertPending(data: {
     email: string;
@@ -27,6 +33,8 @@ export interface SubscriptionRepository {
   findByUnsubscribeToken(token: string): Promise<Subscription | null>;
   save(subscription: Subscription): Promise<void>;
   listActiveByEmail(email: string): Promise<string[]>;
+  listTrackedRepositories(): Promise<TrackedRepository[]>;
+  updateLastSeenTag(repository: string, tag: string): Promise<void>;
 }
 
 export class PostgresSubscriptionRepository implements SubscriptionRepository {
@@ -175,6 +183,48 @@ export class PostgresSubscriptionRepository implements SubscriptionRepository {
     return rows.map(row => row.repository);
   }
 
+  public async listTrackedRepositories(): Promise<TrackedRepository[]> {
+    const rows = await this.db
+      .select({
+        repository: repositoriesTable.fullName,
+        lastSeenTag: repositoriesTable.lastSeenTag,
+        email: subscriptionsTable.email,
+      })
+      .from(subscriptionsTable)
+      .innerJoin(
+        repositoriesTable,
+        eq(subscriptionsTable.repositoryId, repositoriesTable.id)
+      )
+      .where(eq(subscriptionsTable.status, 'active'));
+
+    const grouped = new Map<string, TrackedRepository>();
+    for (const row of rows) {
+      const existing = grouped.get(row.repository);
+      if (existing) {
+        existing.subscriberEmails.push(row.email);
+        continue;
+      }
+
+      grouped.set(row.repository, {
+        repository: row.repository,
+        lastSeenTag: row.lastSeenTag,
+        subscriberEmails: [row.email],
+      });
+    }
+
+    return [...grouped.values()];
+  }
+
+  public async updateLastSeenTag(repository: string, tag: string): Promise<void> {
+    await this.db
+      .update(repositoriesTable)
+      .set({
+        lastSeenTag: tag,
+        updatedAt: new Date(),
+      })
+      .where(eq(repositoriesTable.fullName, repository));
+  }
+
   private mapToDomain(subscription: Subscription): Subscription {
     return {
       email: subscription.email,
@@ -190,6 +240,7 @@ export class InMemorySubscriptionRepository implements SubscriptionRepository {
   private readonly byEmailRepo = new Map<string, Subscription>();
   private readonly byConfirmToken = new Map<string, string>();
   private readonly byUnsubscribeToken = new Map<string, string>();
+  private readonly lastSeenByRepository = new Map<string, string | null>();
 
   public async upsertPending(data: {
     email: string;
@@ -215,6 +266,9 @@ export class InMemorySubscriptionRepository implements SubscriptionRepository {
     this.byEmailRepo.set(key, next);
     this.byConfirmToken.set(next.confirmToken, key);
     this.byUnsubscribeToken.set(next.unsubscribeToken, key);
+    if (!this.lastSeenByRepository.has(data.repository)) {
+      this.lastSeenByRepository.set(data.repository, null);
+    }
     return next;
   }
 
@@ -257,6 +311,35 @@ export class InMemorySubscriptionRepository implements SubscriptionRepository {
     }
 
     return repositories;
+  }
+
+  public async listTrackedRepositories(): Promise<TrackedRepository[]> {
+    const grouped = new Map<string, TrackedRepository>();
+
+    for (const subscription of this.byEmailRepo.values()) {
+      if (subscription.status !== 'active') {
+        continue;
+      }
+
+      const existing = grouped.get(subscription.repository);
+      if (existing) {
+        existing.subscriberEmails.push(subscription.email);
+        continue;
+      }
+
+      grouped.set(subscription.repository, {
+        repository: subscription.repository,
+        lastSeenTag:
+          this.lastSeenByRepository.get(subscription.repository) ?? null,
+        subscriberEmails: [subscription.email],
+      });
+    }
+
+    return [...grouped.values()];
+  }
+
+  public async updateLastSeenTag(repository: string, tag: string): Promise<void> {
+    this.lastSeenByRepository.set(repository, tag);
   }
 
   private toKey(email: string, repository: string): string {

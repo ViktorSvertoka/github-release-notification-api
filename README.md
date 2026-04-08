@@ -69,6 +69,7 @@ Core variables:
 - `DATABASE_URL`
 - `REDIS_URL`
 - `CACHE_TTL_SECONDS`
+- `SCAN_INTERVAL_SECONDS`
 - `SMTP_HOST`
 - `SMTP_PORT`
 - `SMTP_USER`
@@ -87,6 +88,15 @@ Core variables:
 - GitHub repository existence checks are cached in Redis
 - Default TTL is `600` seconds (`CACHE_TTL_SECONDS`)
 - Cache key format: `gh:repo-exists:{owner}/{repo}`
+
+## Scanner and notifier
+
+- Release scanner runs every `SCAN_INTERVAL_SECONDS` (default `300`)
+- Scanner checks latest release for tracked repositories with active subscriptions
+- New tag detection logic:
+  - if `last_seen_tag` is empty, scanner initializes it and does not send email
+  - if latest tag differs from `last_seen_tag`, scanner sends email to active subscribers and updates `last_seen_tag`
+- SMTP notifier is enabled only when all required SMTP variables are provided
 
 ## API contract
 

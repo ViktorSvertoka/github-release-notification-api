@@ -38,7 +38,53 @@ export class RedisGitHubCache implements GitHubCache {
     );
   }
 
+  public async getLatestRelease(
+    repository: string
+  ): Promise<{ tagName: string; htmlUrl: string } | null | undefined> {
+    const value = await this.redis.get(this.latestReleaseKey(repository));
+    if (value === null) {
+      return undefined;
+    }
+
+    if (value === 'none') {
+      return null;
+    }
+
+    try {
+      const parsed = JSON.parse(value) as { tagName: string; htmlUrl: string };
+      return parsed;
+    } catch {
+      return null;
+    }
+  }
+
+  public async setLatestRelease(
+    repository: string,
+    release: { tagName: string; htmlUrl: string } | null
+  ): Promise<void> {
+    if (!release) {
+      await this.redis.set(
+        this.latestReleaseKey(repository),
+        'none',
+        'EX',
+        this.ttlSeconds
+      );
+      return;
+    }
+
+    await this.redis.set(
+      this.latestReleaseKey(repository),
+      JSON.stringify(release),
+      'EX',
+      this.ttlSeconds
+    );
+  }
+
   private key(repository: string): string {
     return `gh:repo-exists:${repository.toLowerCase()}`;
+  }
+
+  private latestReleaseKey(repository: string): string {
+    return `gh:latest-release:${repository.toLowerCase()}`;
   }
 }

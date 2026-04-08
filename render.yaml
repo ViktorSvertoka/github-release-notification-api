@@ -14,6 +14,8 @@ services:
         sync: false
       - key: CACHE_TTL_SECONDS
         value: 600
+      - key: SCAN_INTERVAL_SECONDS
+        value: 300
       - key: SMTP_HOST
         sync: false
       - key: SMTP_PORT
