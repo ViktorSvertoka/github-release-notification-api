@@ -1,0 +1,267 @@
+openapi: 3.0.3
+info:
+  title: GitHub Release Notification API
+  version: 1.0.0
+  description: >
+    API to subscribe email addresses to release notifications for GitHub
+    repositories.
+servers:
+  - url: http://localhost:3000
+    description: Local server
+tags:
+  - name: Subscriptions
+paths:
+  /api/subscribe:
+    post:
+      tags:
+        - Subscriptions
+      summary: Subscribe an email to repository release notifications
+      operationId: subscribe
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubscribeRequest'
+      responses:
+        '200':
+          description: Subscription created. Confirmation email sent.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+              examples:
+                success:
+                  value:
+                    message: Confirmation email sent. Please check your inbox.
+        '400':
+          description: Invalid request payload or repository format
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                invalid_format:
+                  value:
+                    message: Invalid repository format. Expected owner/repo.
+        '404':
+          description: GitHub repository not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                not_found:
+                  value:
+                    message: Repository not found.
+        '429':
+          description: GitHub API rate limit exceeded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                rate_limit:
+                  value:
+                    message: GitHub API rate limit exceeded. Try again later.
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/confirm/{token}:
+    get:
+      tags:
+        - Subscriptions
+      summary: Confirm email subscription
+      operationId: confirmSubscription
+      parameters:
+        - name: token
+          in: path
+          required: true
+          description: Email confirmation token
+          schema:
+            type: string
+            minLength: 1
+      responses:
+        '200':
+          description: Subscription confirmed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+              examples:
+                success:
+                  value:
+                    message: Subscription confirmed successfully.
+        '400':
+          description: Invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                invalid_token:
+                  value:
+                    message: Invalid or expired token.
+        '404':
+          description: Token not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                not_found:
+                  value:
+                    message: Subscription token not found.
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/unsubscribe/{token}:
+    get:
+      tags:
+        - Subscriptions
+      summary: Unsubscribe from release notifications
+      operationId: unsubscribe
+      parameters:
+        - name: token
+          in: path
+          required: true
+          description: Unsubscribe token
+          schema:
+            type: string
+            minLength: 1
+      responses:
+        '200':
+          description: Unsubscribed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+              examples:
+                success:
+                  value:
+                    message: Unsubscribed successfully.
+        '400':
+          description: Invalid token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                invalid_token:
+                  value:
+                    message: Invalid or expired token.
+        '404':
+          description: Token not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                not_found:
+                  value:
+                    message: Subscription token not found.
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/subscriptions:
+    get:
+      tags:
+        - Subscriptions
+      summary: Get active subscriptions by email
+      operationId: listSubscriptions
+      parameters:
+        - name: email
+          in: query
+          required: true
+          description: Subscriber email address
+          schema:
+            type: string
+            format: email
+      responses:
+        '200':
+          description: Active subscriptions list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubscriptionsResponse'
+              examples:
+                success:
+                  value:
+                    email: user@example.com
+                    subscriptions:
+                      - golang/go
+                      - nodejs/node
+        '400':
+          description: Invalid email query parameter
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                invalid_email:
+                  value:
+                    message: Invalid email.
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+components:
+  schemas:
+    SubscribeRequest:
+      type: object
+      required:
+        - email
+        - repository
+      additionalProperties: false
+      properties:
+        email:
+          type: string
+          format: email
+          example: user@example.com
+        repository:
+          type: string
+          description: GitHub repository in owner/repo format
+          pattern: '^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$'
+          example: golang/go
+    MessageResponse:
+      type: object
+      required:
+        - message
+      additionalProperties: false
+      properties:
+        message:
+          type: string
+    ErrorResponse:
+      type: object
+      required:
+        - message
+      additionalProperties: false
+      properties:
+        message:
+          type: string
+    SubscriptionsResponse:
+      type: object
+      required:
+        - email
+        - subscriptions
+      additionalProperties: false
+      properties:
+        email:
+          type: string
+          format: email
+        subscriptions:
+          type: array
+          items:
+            type: string
+            description: GitHub repository in owner/repo format
