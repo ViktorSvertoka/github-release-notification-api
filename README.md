@@ -11,6 +11,9 @@ subscriptions.
 - ESLint + Prettier
 - Vitest
 - Pino logger
+- Docker + Docker Compose
+- PostgreSQL (local in Docker, Neon for production)
+- Redis (local in Docker, Upstash for production)
 
 ## Scripts
 
@@ -18,14 +21,72 @@ subscriptions.
 - `npm run build` - compile TypeScript to `dist/`
 - `npm run start` - run compiled app
 - `npm run lint` - run ESLint
+- `npm run lint:fix` - run ESLint with auto-fixes
+- `npm run format` - run Prettier
 - `npm run test` - run unit tests
+- `npm run db:generate` - generate Drizzle migrations
+- `npm run db:migrate` - apply migrations
 
-## Quick start
+## Local run (without Docker)
 
 ```bash
+cp .env.example .env
 npm install
 npm run dev
 ```
+
+## Local run (Docker)
+
+```bash
+docker compose up --build
+```
+
+This starts:
+
+- API on `http://localhost:3000`
+- PostgreSQL on `localhost:5432`
+- Redis on `localhost:6379`
+
+## Production deployment target
+
+This project is prepared for:
+
+- API container on Render
+- PostgreSQL on Neon
+- Redis on Upstash
+
+`render.yaml` is included as a base Render blueprint.
+
+## Environment variables
+
+See [.env.example](./.env.example) for the full list.
+
+Core variables:
+
+- `NODE_ENV`
+- `PORT`
+- `GITHUB_TOKEN`
+- `DATABASE_URL`
+- `REDIS_URL`
+- `CACHE_TTL_SECONDS`
+- `SMTP_HOST`
+- `SMTP_PORT`
+- `SMTP_USER`
+- `SMTP_PASS`
+- `SMTP_FROM`
+- `API_KEY`
+
+## Database and migrations
+
+- PostgreSQL schema is defined in `src/db/schema.ts`
+- SQL migrations are stored in `drizzle/`
+- Migrations are executed automatically on service startup
+
+## Redis cache
+
+- GitHub repository existence checks are cached in Redis
+- Default TTL is `600` seconds (`CACHE_TTL_SECONDS`)
+- Cache key format: `gh:repo-exists:{owner}/{repo}`
 
 ## API contract
 

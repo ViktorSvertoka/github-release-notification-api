@@ -7,6 +7,8 @@
     "dev": "tsx watch src/index.ts",
     "build": "tsc -p tsconfig.json",
     "start": "node dist/index.js",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "tsx src/db/migrate.ts",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
@@ -26,7 +28,10 @@
   "homepage": "https://github.com/ViktorSvertoka/github-release-notification-api#readme",
   "dependencies": {
     "dotenv": "^17.4.1",
+    "drizzle-orm": "^0.45.2",
     "express": "^5.2.1",
+    "ioredis": "^5.10.1",
+    "pg": "^8.20.0",
     "pino": "^10.3.1",
     "pino-http": "^11.0.0",
     "zod": "^4.3.6"
@@ -35,6 +40,8 @@
     "@eslint/js": "^10.0.1",
     "@types/express": "^5.0.6",
     "@types/node": "^25.5.2",
+    "@types/pg": "^8.20.0",
+    "drizzle-kit": "^0.31.10",
     "eslint": "^10.2.0",
     "eslint-config-prettier": "^10.1.8",
     "prettier": "^3.8.1",
