@@ -69,7 +69,7 @@ async function bootstrap(): Promise<void> {
     }
     isShuttingDown = true;
     logger.info({ signal }, 'Graceful shutdown started');
-    scannerScheduler.stop();
+    await scannerScheduler.stop();
 
     await new Promise<void>((resolve, reject) => {
       server.close(error => {

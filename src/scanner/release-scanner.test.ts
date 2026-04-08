@@ -12,6 +12,7 @@ import { ReleaseScanner, type LoggerLike } from './release-scanner.js';
 class FakeRepository implements SubscriptionRepository {
   public tracked: TrackedRepository[] = [];
   public readonly updatedTags: Array<{ repository: string; tag: string }> = [];
+  private readonly deliveriesByRepoTag = new Map<string, Set<string>>();
 
   public async upsertPending(data: {
     email: string;
@@ -52,6 +53,25 @@ class FakeRepository implements SubscriptionRepository {
   public async updateLastSeenTag(repository: string, tag: string): Promise<void> {
     this.updatedTags.push({ repository, tag });
   }
+
+  public async listDeliveredEmailsForTag(
+    repository: string,
+    tag: string
+  ): Promise<string[]> {
+    const key = `${repository}::${tag}`;
+    return [...(this.deliveriesByRepoTag.get(key) ?? new Set<string>())];
+  }
+
+  public async markNotificationDelivered(input: {
+    repository: string;
+    tag: string;
+    email: string;
+  }): Promise<void> {
+    const key = `${input.repository}::${input.tag}`;
+    const set = this.deliveriesByRepoTag.get(key) ?? new Set<string>();
+    set.add(input.email);
+    this.deliveriesByRepoTag.set(key, set);
+  }
 }
 
 class FakeGitHubClient implements GitHubRepositoryClient {
@@ -82,12 +102,17 @@ class FakeNotifier implements EmailNotifier {
     releaseUrl: string;
   }> = [];
 
+  public failEmails = new Set<string>();
+
   public async sendNewReleaseEmail(input: {
     to: string;
     repository: string;
     tagName: string;
     releaseUrl: string;
   }): Promise<void> {
+    if (this.failEmails.has(input.to)) {
+      throw new Error(`delivery failed for ${input.to}`);
+    }
     this.sent.push(input);
   }
 }
@@ -189,5 +214,41 @@ describe('ReleaseScanner', () => {
 
     expect(repository.updatedTags).toEqual([]);
     expect(notifier.sent).toEqual([]);
+  });
+
+  it('retries only failed recipients for the same release tag', async () => {
+    const repository = new FakeRepository();
+    repository.tracked = [
+      {
+        repository: 'golang/go',
+        lastSeenTag: 'v1.0.0',
+        subscriberEmails: ['a@example.com', 'b@example.com'],
+      },
+    ];
+    const gitHub = new FakeGitHubClient({
+      'golang/go': { tagName: 'v1.1.0', htmlUrl: 'https://example.com/r/2' },
+    });
+    const notifier = new FakeNotifier();
+    notifier.failEmails.add('b@example.com');
+    const scanner = new ReleaseScanner(
+      repository,
+      gitHub,
+      notifier,
+      new FakeLogger()
+    );
+
+    await scanner.runOnce();
+    expect(repository.updatedTags).toEqual([]);
+    expect(notifier.sent).toHaveLength(1);
+    expect(notifier.sent[0]?.to).toBe('a@example.com');
+
+    notifier.failEmails.delete('b@example.com');
+    await scanner.runOnce();
+
+    expect(notifier.sent).toHaveLength(2);
+    expect(notifier.sent[1]?.to).toBe('b@example.com');
+    expect(repository.updatedTags).toEqual([
+      { repository: 'golang/go', tag: 'v1.1.0' },
+    ]);
   });
 });

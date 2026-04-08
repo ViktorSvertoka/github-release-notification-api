@@ -51,3 +51,23 @@ export const subscriptionsTable = pgTable(
     ),
   })
 );
+
+export const notificationDeliveriesTable = pgTable(
+  'notification_deliveries',
+  {
+    id: serial('id').primaryKey(),
+    repositoryId: integer('repository_id')
+      .notNull()
+      .references(() => repositoriesTable.id, { onDelete: 'cascade' }),
+    tag: text('tag').notNull(),
+    email: text('email').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  table => ({
+    repoTagEmailUnique: unique(
+      'notification_deliveries_repository_tag_email_unique'
+    ).on(table.repositoryId, table.tag, table.email),
+  })
+);

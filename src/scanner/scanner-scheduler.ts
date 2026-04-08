@@ -1,26 +1,48 @@
-import type { ReleaseScanner } from './release-scanner.js';
+export interface ScannerRunner {
+  runOnce(): Promise<void>;
+}
 
 export interface ScannerScheduler {
-  stop(): void;
+  stop(): Promise<void>;
 }
 
 export function startScannerScheduler(input: {
-  scanner: ReleaseScanner;
+  scanner: ScannerRunner;
   intervalSeconds: number;
   onError: (error: unknown) => void;
 }): ScannerScheduler {
   const intervalMs = input.intervalSeconds * 1000;
+  let currentRun: Promise<void> | null = null;
+  let stopping = false;
+
+  const runIfIdle = (): void => {
+    if (stopping || currentRun) {
+      return;
+    }
+
+    currentRun = input.scanner
+      .runOnce()
+      .catch(input.onError)
+      .finally(() => {
+        currentRun = null;
+      });
+  };
+
   const timer = setInterval(() => {
-    input.scanner.runOnce().catch(input.onError);
+    runIfIdle();
   }, intervalMs);
   timer.unref();
 
   // Run once immediately on startup.
-  input.scanner.runOnce().catch(input.onError);
+  runIfIdle();
 
   return {
-    stop() {
+    async stop() {
+      stopping = true;
       clearInterval(timer);
+      if (currentRun) {
+        await currentRun;
+      }
     },
   };
 }

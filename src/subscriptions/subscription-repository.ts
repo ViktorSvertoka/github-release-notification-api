@@ -1,6 +1,7 @@
 import { and, eq } from 'drizzle-orm';
 import type { AppDatabase } from '../db/client.js';
 import {
+  notificationDeliveriesTable,
   repositoriesTable,
   subscriptionsTable,
   type subscriptionStatusEnum,
@@ -35,6 +36,12 @@ export interface SubscriptionRepository {
   listActiveByEmail(email: string): Promise<string[]>;
   listTrackedRepositories(): Promise<TrackedRepository[]>;
   updateLastSeenTag(repository: string, tag: string): Promise<void>;
+  listDeliveredEmailsForTag(repository: string, tag: string): Promise<string[]>;
+  markNotificationDelivered(input: {
+    repository: string;
+    tag: string;
+    email: string;
+  }): Promise<void>;
 }
 
 export class PostgresSubscriptionRepository implements SubscriptionRepository {
@@ -225,6 +232,57 @@ export class PostgresSubscriptionRepository implements SubscriptionRepository {
       .where(eq(repositoriesTable.fullName, repository));
   }
 
+  public async listDeliveredEmailsForTag(
+    repository: string,
+    tag: string
+  ): Promise<string[]> {
+    const [repo] = await this.db
+      .select({ id: repositoriesTable.id })
+      .from(repositoriesTable)
+      .where(eq(repositoriesTable.fullName, repository))
+      .limit(1);
+
+    if (!repo) {
+      return [];
+    }
+
+    const rows = await this.db
+      .select({ email: notificationDeliveriesTable.email })
+      .from(notificationDeliveriesTable)
+      .where(
+        and(
+          eq(notificationDeliveriesTable.repositoryId, repo.id),
+          eq(notificationDeliveriesTable.tag, tag)
+        )
+      );
+    return rows.map(row => row.email);
+  }
+
+  public async markNotificationDelivered(input: {
+    repository: string;
+    tag: string;
+    email: string;
+  }): Promise<void> {
+    const [repo] = await this.db
+      .select({ id: repositoriesTable.id })
+      .from(repositoriesTable)
+      .where(eq(repositoriesTable.fullName, input.repository))
+      .limit(1);
+
+    if (!repo) {
+      throw new Error('Repository not found for notification delivery mark.');
+    }
+
+    await this.db
+      .insert(notificationDeliveriesTable)
+      .values({
+        repositoryId: repo.id,
+        tag: input.tag,
+        email: input.email,
+      })
+      .onConflictDoNothing();
+  }
+
   private mapToDomain(subscription: Subscription): Subscription {
     return {
       email: subscription.email,
@@ -241,6 +299,7 @@ export class InMemorySubscriptionRepository implements SubscriptionRepository {
   private readonly byConfirmToken = new Map<string, string>();
   private readonly byUnsubscribeToken = new Map<string, string>();
   private readonly lastSeenByRepository = new Map<string, string | null>();
+  private readonly deliveriesByRepoTag = new Map<string, Set<string>>();
 
   public async upsertPending(data: {
     email: string;
@@ -342,7 +401,30 @@ export class InMemorySubscriptionRepository implements SubscriptionRepository {
     this.lastSeenByRepository.set(repository, tag);
   }
 
+  public async listDeliveredEmailsForTag(
+    repository: string,
+    tag: string
+  ): Promise<string[]> {
+    const key = this.repoTagKey(repository, tag);
+    return [...(this.deliveriesByRepoTag.get(key) ?? new Set<string>())];
+  }
+
+  public async markNotificationDelivered(input: {
+    repository: string;
+    tag: string;
+    email: string;
+  }): Promise<void> {
+    const key = this.repoTagKey(input.repository, input.tag);
+    const deliveries = this.deliveriesByRepoTag.get(key) ?? new Set<string>();
+    deliveries.add(input.email.toLowerCase());
+    this.deliveriesByRepoTag.set(key, deliveries);
+  }
+
   private toKey(email: string, repository: string): string {
     return `${email.toLowerCase()}::${repository.toLowerCase()}`;
+  }
+
+  private repoTagKey(repository: string, tag: string): string {
+    return `${repository.toLowerCase()}::${tag}`;
   }
 }

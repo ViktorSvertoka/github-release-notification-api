@@ -32,7 +32,7 @@ export class ReleaseScanner {
             { repository: item.repository, error: error.message },
             'Release scan skipped due to GitHub rate limit'
           );
-          continue;
+          break;
         }
 
         this.logger.error(
@@ -71,13 +71,58 @@ export class ReleaseScanner {
       return;
     }
 
-    for (const email of item.subscriberEmails) {
-      await this.emailNotifier.sendNewReleaseEmail({
-        to: email,
-        repository: item.repository,
-        tagName: release.tagName,
-        releaseUrl: release.htmlUrl,
-      });
+    const deliveredEmails = new Set(
+      await this.subscriptionRepository.listDeliveredEmailsForTag(
+        item.repository,
+        release.tagName
+      )
+    );
+
+    const pendingRecipients = item.subscriberEmails.filter(
+      email => !deliveredEmails.has(email)
+    );
+
+    for (const email of pendingRecipients) {
+      try {
+        await this.emailNotifier.sendNewReleaseEmail({
+          to: email,
+          repository: item.repository,
+          tagName: release.tagName,
+          releaseUrl: release.htmlUrl,
+        });
+        await this.subscriptionRepository.markNotificationDelivered({
+          repository: item.repository,
+          tag: release.tagName,
+          email,
+        });
+      } catch (error) {
+        this.logger.error(
+          { repository: item.repository, tag: release.tagName, email, error },
+          'Failed to send release notification'
+        );
+      }
+    }
+
+    const deliveredAfter = new Set(
+      await this.subscriptionRepository.listDeliveredEmailsForTag(
+        item.repository,
+        release.tagName
+      )
+    );
+    const allDelivered = item.subscriberEmails.every(email =>
+      deliveredAfter.has(email)
+    );
+    if (!allDelivered) {
+      this.logger.warn(
+        {
+          repository: item.repository,
+          tag: release.tagName,
+          delivered: deliveredAfter.size,
+          total: item.subscriberEmails.length,
+        },
+        'Release notifications partially delivered; will retry next scan'
+      );
+      return;
     }
 
     await this.subscriptionRepository.updateLastSeenTag(

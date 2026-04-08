@@ -54,7 +54,7 @@ export class RedisGitHubCache implements GitHubCache {
       const parsed = JSON.parse(value) as { tagName: string; htmlUrl: string };
       return parsed;
     } catch {
-      return null;
+      return undefined;
     }
   }
 
