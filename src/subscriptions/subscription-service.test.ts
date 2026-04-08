@@ -29,6 +29,10 @@ class FakeGitHubClient implements GitHubRepositoryClient {
 
     return true;
   }
+
+  public async getLatestRelease(): Promise<{ tagName: string; htmlUrl: string } | null> {
+    return null;
+  }
 }
 
 function setup(mode: 'exists' | 'missing' | 'rate-limit' | 'error') {
