@@ -11,8 +11,11 @@ import { SubscriptionService } from './subscriptions/subscription-service.js';
 
 async function bootstrap(): Promise<void> {
   const env = loadRuntimeEnv();
+  const logger = pino({
+    level: env.NODE_ENV === 'production' ? 'info' : 'debug',
+  });
 
-  const { db } = createDbClient(env);
+  const { db, pool } = createDbClient(env);
   await runMigrations(db);
 
   const subscriptionRepository = new PostgresSubscriptionRepository(db);
@@ -28,13 +31,44 @@ async function bootstrap(): Promise<void> {
     gitHubClient
   );
 
-  const logger = pino({
-    level: env.NODE_ENV === 'production' ? 'info' : 'debug',
+  const app = createApp({ subscriptionService });
+  const server = app.listen(env.PORT, () => {
+    logger.info({ port: env.PORT }, 'Server started');
   });
 
-  const app = createApp({ subscriptionService });
-  app.listen(env.PORT, () => {
-    logger.info({ port: env.PORT }, 'Server started');
+  let isShuttingDown = false;
+  const shutdown = async (signal: NodeJS.Signals): Promise<void> => {
+    if (isShuttingDown) {
+      return;
+    }
+    isShuttingDown = true;
+    logger.info({ signal }, 'Graceful shutdown started');
+
+    await new Promise<void>((resolve, reject) => {
+      server.close(error => {
+        if (error) {
+          reject(error);
+          return;
+        }
+        resolve();
+      });
+    });
+    await pool.end();
+    logger.info('Graceful shutdown completed');
+    process.exit(0);
+  };
+
+  process.on('SIGINT', () => {
+    shutdown('SIGINT').catch(error => {
+      logger.error({ error }, 'Graceful shutdown failed');
+      process.exit(1);
+    });
+  });
+  process.on('SIGTERM', () => {
+    shutdown('SIGTERM').catch(error => {
+      logger.error({ error }, 'Graceful shutdown failed');
+      process.exit(1);
+    });
   });
 }
 

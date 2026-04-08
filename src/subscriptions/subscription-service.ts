@@ -57,7 +57,7 @@ export class SubscriptionService {
       throw new NotFoundError('Repository not found.');
     }
 
-    this.repository.upsertPending({
+    await this.repository.upsertPending({
       email: normalizedEmail,
       repository,
       confirmToken: this.generateToken(),

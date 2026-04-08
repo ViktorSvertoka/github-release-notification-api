@@ -21,7 +21,13 @@ const envSchema = z.object({
 export type Env = z.infer<typeof envSchema>;
 
 export function parseEnv(input: Record<string, string | undefined>): Env {
-  return envSchema.parse(input);
+  const parsed = envSchema.parse(input);
+
+  if (parsed.NODE_ENV !== 'test' && !parsed.DATABASE_URL) {
+    throw new Error('DATABASE_URL is required.');
+  }
+
+  return parsed;
 }
 
 export function loadRuntimeEnv(): Env {
