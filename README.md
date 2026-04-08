@@ -27,6 +27,10 @@ npm install
 npm run dev
 ```
 
+## API contract
+
+OpenAPI contract is available in [swagger.yaml](./swagger.yaml).
+
 Healthcheck endpoint:
 
 `GET /health`
