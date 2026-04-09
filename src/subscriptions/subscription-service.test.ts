@@ -90,12 +90,12 @@ describe('SubscriptionService', () => {
       message: 'Confirmation email sent. Please check your inbox.',
     });
     expect(emailNotifier.confirmationCalls).toHaveLength(1);
-    expect(emailNotifier.confirmationCalls[0]?.confirmUrl).toContain(
-      '/api/confirm/'
+    const confirmUrl = new URL(emailNotifier.confirmationCalls[0]!.confirmUrl);
+    const unsubscribeUrl = new URL(
+      emailNotifier.confirmationCalls[0]!.unsubscribeUrl
     );
-    expect(emailNotifier.confirmationCalls[0]?.unsubscribeUrl).toContain(
-      '/api/unsubscribe/'
-    );
+    expect(confirmUrl.pathname).toMatch(/^\/confirm\/[^/]+$/);
+    expect(unsubscribeUrl.pathname).toMatch(/^\/unsubscribe\/[^/]+$/);
   });
 
   it('throws 400 for invalid repository format', async () => {
