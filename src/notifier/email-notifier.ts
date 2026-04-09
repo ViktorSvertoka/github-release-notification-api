@@ -61,6 +61,11 @@ export class SmtpEmailNotifier implements EmailNotifier {
           `Tag: ${input.tagName}`,
           `URL: ${input.releaseUrl}`,
         ].join('\n'),
+        html: createReleaseEmailHtml({
+          repository: input.repository,
+          tagName: input.tagName,
+          releaseUrl: input.releaseUrl,
+        }),
       });
       recordEmailNotification({ type: 'release', result: 'success' });
     } catch (error) {
@@ -144,6 +149,61 @@ function createConfirmationEmailHtml(input: {
             <tr>
               <td style="padding:0 24px 24px;">
                 <a href="${unsubscribeUrl}" style="font-size:14px;color:#0f4fa8;text-decoration:underline;">Unsubscribe</a>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>`;
+}
+
+function createReleaseEmailHtml(input: {
+  repository: string;
+  tagName: string;
+  releaseUrl: string;
+}): string {
+  const repository = escapeHtml(input.repository);
+  const tagName = escapeHtml(input.tagName);
+  const releaseUrl = escapeHtml(input.releaseUrl);
+
+  return `<!doctype html>
+<html lang="en">
+  <body style="margin:0;padding:0;background:#f4f7fb;font-family:Arial,sans-serif;color:#0f1728;">
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="padding:24px 12px;">
+      <tr>
+        <td align="center">
+          <table role="presentation" width="620" cellspacing="0" cellpadding="0" style="max-width:620px;width:100%;background:#ffffff;border:1px solid #dde5f0;border-radius:16px;overflow:hidden;">
+            <tr>
+              <td style="padding:24px 24px 10px;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:#475569;font-weight:700;">
+                GitHub Release Alerts
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:0 24px 8px;font-size:34px;line-height:1;letter-spacing:-0.03em;font-weight:800;color:#0f1728;">
+                New Release Published
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:0 24px 8px;font-size:16px;line-height:1.5;color:#475569;">
+                Repository: <strong>${repository}</strong>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:0 24px 20px;font-size:16px;line-height:1.5;color:#475569;">
+                Tag: <strong>${tagName}</strong>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:0 24px 20px;">
+                <a href="${releaseUrl}" style="display:inline-block;padding:12px 18px;border-radius:10px;background:#0f172a;color:#f8fafc;text-decoration:none;font-weight:700;">View release</a>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:0 24px 24px;font-size:14px;line-height:1.5;color:#64748b;">
+                If the button does not work, open this URL:<br />
+                <a href="${releaseUrl}" style="color:#0f4fa8;text-decoration:underline;">${releaseUrl}</a>
               </td>
             </tr>
           </table>

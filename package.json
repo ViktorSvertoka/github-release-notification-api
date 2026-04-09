@@ -1,6 +1,6 @@
 {
   "name": "github-release-notification-api",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "API for GitHub release subscription notifications",
   "main": "dist/index.js",
   "scripts": {
