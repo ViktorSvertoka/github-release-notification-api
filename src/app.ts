@@ -79,6 +79,8 @@ function normalizeRoute(pathname: string): string {
     '/',
     '/health',
     '/metrics',
+    '/confirm',
+    '/unsubscribe',
     '/api/subscribe',
     '/api/subscriptions',
   ]);
@@ -93,6 +95,14 @@ function normalizeRoute(pathname: string): string {
 
   if (/^\/api\/unsubscribe\/[^/]+$/.test(pathname)) {
     return '/api/unsubscribe/:token';
+  }
+
+  if (/^\/confirm\/[^/]+$/.test(pathname)) {
+    return '/confirm/:token';
+  }
+
+  if (/^\/unsubscribe\/[^/]+$/.test(pathname)) {
+    return '/unsubscribe/:token';
   }
 
   return 'unmatched';

@@ -91,10 +91,10 @@ describe('SubscriptionService', () => {
     });
     expect(emailNotifier.confirmationCalls).toHaveLength(1);
     expect(emailNotifier.confirmationCalls[0]?.confirmUrl).toContain(
-      '/api/confirm/'
+      '/confirm/'
     );
     expect(emailNotifier.confirmationCalls[0]?.unsubscribeUrl).toContain(
-      '/api/unsubscribe/'
+      '/unsubscribe/'
     );
   });
 

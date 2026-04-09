@@ -140,11 +140,11 @@ export class SubscriptionService {
 
   private buildConfirmUrl(token: string): string {
     const baseUrl = this.appBaseUrl.replace(/\/+$/, '');
-    return `${baseUrl}/api/confirm/${token}`;
+    return `${baseUrl}/confirm/${token}`;
   }
 
   private buildUnsubscribeUrl(token: string): string {
     const baseUrl = this.appBaseUrl.replace(/\/+$/, '');
-    return `${baseUrl}/api/unsubscribe/${token}`;
+    return `${baseUrl}/unsubscribe/${token}`;
   }
 }
