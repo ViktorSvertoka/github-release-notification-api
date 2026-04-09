@@ -104,6 +104,15 @@ class FakeNotifier implements EmailNotifier {
 
   public failEmails = new Set<string>();
 
+  public async sendSubscriptionConfirmationEmail(input: {
+    to: string;
+    repository: string;
+    confirmUrl: string;
+    unsubscribeUrl: string;
+  }): Promise<void> {
+    void input;
+  }
+
   public async sendNewReleaseEmail(input: {
     to: string;
     repository: string;

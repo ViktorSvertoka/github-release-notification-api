@@ -1,4 +1,5 @@
 import express, { type ErrorRequestHandler } from 'express';
+import path from 'node:path';
 import { pinoHttp } from 'pino-http';
 
 import { AppError } from './errors.js';
@@ -11,6 +12,7 @@ interface CreateAppDependencies {
 
 export function createApp(dependencies: CreateAppDependencies) {
   const app = express();
+  const publicDir = path.resolve(process.cwd(), 'public');
 
   app.use(
     pinoHttp({
@@ -18,6 +20,11 @@ export function createApp(dependencies: CreateAppDependencies) {
     })
   );
   app.use(express.json());
+  app.use(express.static(publicDir));
+
+  app.get('/', (_req, res) => {
+    res.sendFile(path.join(publicDir, 'index.html'));
+  });
 
   app.get('/health', (_req, res) => {
     res.status(200).json({ status: 'ok' });

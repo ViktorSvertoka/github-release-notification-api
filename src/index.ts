@@ -32,14 +32,16 @@ async function bootstrap(): Promise<void> {
     env.GITHUB_TOKEN,
     gitHubCache
   );
-  const subscriptionService = new SubscriptionService(
-    subscriptionRepository,
-    gitHubClient
-  );
   const emailNotifier =
     env.SMTP_HOST && env.SMTP_USER && env.SMTP_PASS && env.SMTP_FROM
       ? new SmtpEmailNotifier(env)
       : new NoopEmailNotifier();
+  const subscriptionService = new SubscriptionService(
+    subscriptionRepository,
+    gitHubClient,
+    emailNotifier,
+    env.APP_BASE_URL
+  );
   const releaseScanner = new ReleaseScanner(
     subscriptionRepository,
     gitHubClient,

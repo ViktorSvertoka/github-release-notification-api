@@ -1,0 +1,540 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Release Radar - GitHub Release Notifications</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;700;800&family=Space+Mono:wght@400;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --bg-0: #f7f8fb;
+        --bg-1: #eef1f7;
+        --card: rgba(255, 255, 255, 0.86);
+        --card-solid: #ffffff;
+        --line: #dce3ef;
+        --ink: #0f1728;
+        --ink-soft: #4a556b;
+        --brand: #111827;
+        --brand-soft: #2a3550;
+        --accent: #2563eb;
+        --accent-soft: #dbeafe;
+        --good: #0f766e;
+        --bad: #b42318;
+        --shadow: 0 24px 70px rgba(10, 19, 38, 0.1);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: 'Manrope', sans-serif;
+        color: var(--ink);
+        background:
+          radial-gradient(700px 320px at 10% -5%, #dbeafe 0%, transparent 68%),
+          radial-gradient(640px 310px at 95% 0%, #e0e7ff 0%, transparent 70%),
+          linear-gradient(180deg, var(--bg-0) 0%, var(--bg-1) 100%);
+      }
+
+      .page {
+        width: min(1140px, 92%);
+        margin: 28px auto 72px;
+      }
+
+      .page__header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 16px;
+        opacity: 0;
+        transform: translateY(10px);
+        animation: enter 500ms ease forwards;
+      }
+
+      .brand {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        font-weight: 800;
+        letter-spacing: -0.01em;
+      }
+
+      .brand__dot {
+        width: 11px;
+        height: 11px;
+        border-radius: 999px;
+        background: linear-gradient(135deg, #111827, #3b82f6);
+        box-shadow: 0 0 0 6px #dbeafe;
+      }
+
+      .page__build {
+        font-family: 'Space Mono', monospace;
+        font-size: 12px;
+        color: #53617a;
+      }
+
+      .hero {
+        border: 1px solid var(--line);
+        border-radius: 26px;
+        background: var(--card);
+        backdrop-filter: blur(8px);
+        box-shadow: var(--shadow);
+        overflow: hidden;
+        margin-bottom: 20px;
+        opacity: 0;
+        transform: translateY(14px);
+        animation: enter 560ms ease 80ms forwards;
+      }
+
+      .hero__inner {
+        padding: clamp(20px, 3vw, 34px);
+        display: grid;
+        gap: 18px;
+      }
+
+      .hero__badge {
+        width: fit-content;
+        border-radius: 999px;
+        background: #e2e8f0;
+        color: #334155;
+        padding: 6px 11px;
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        font-weight: 800;
+      }
+
+      .hero__title {
+        margin: 0;
+        font-size: clamp(34px, 6vw, 68px);
+        letter-spacing: -0.04em;
+        line-height: 0.92;
+        text-wrap: balance;
+      }
+
+      .hero__subtitle {
+        margin: 0;
+        max-width: 65ch;
+        font-size: clamp(15px, 1.9vw, 24px);
+        line-height: 1.45;
+        color: var(--ink-soft);
+      }
+
+      .hero__mono {
+        font-family: 'Space Mono', monospace;
+        color: #0f4fa8;
+        font-size: 0.92em;
+      }
+
+      .content {
+        display: grid;
+        gap: 18px;
+      }
+
+      .card {
+        border: 1px solid var(--line);
+        border-radius: 24px;
+        background: var(--card-solid);
+        box-shadow: var(--shadow);
+        min-width: 0;
+      }
+
+      .subscribe-card {
+        padding: clamp(18px, 2.6vw, 28px);
+        display: flex;
+        flex-direction: column;
+        opacity: 0;
+        transform: translateY(18px);
+        animation: enter 620ms ease 160ms forwards;
+      }
+
+      .subscribe-card__title {
+        margin: 0 0 8px;
+        font-size: clamp(31px, 3.7vw, 44px);
+        letter-spacing: -0.03em;
+        line-height: 0.95;
+      }
+
+      .subscribe-card__description {
+        margin: 0;
+        color: var(--ink-soft);
+        font-size: 18px;
+        line-height: 1.45;
+      }
+
+      .subscribe-card__form {
+        display: flex;
+        flex-direction: column;
+        gap: 18px;
+        margin-top: 20px;
+      }
+
+      .subscribe-card__form-grid {
+        display: grid;
+        gap: 12px;
+      }
+
+      .subscribe-card__field {
+        display: grid;
+        gap: 7px;
+      }
+
+      .subscribe-card__label {
+        font-size: 13px;
+        font-weight: 700;
+        color: #324053;
+      }
+
+      .subscribe-card__input {
+        width: 100%;
+        border: 1px solid #d4ddeb;
+        border-radius: 14px;
+        background: #f8faff;
+        padding: 13px 14px;
+        color: var(--ink);
+        font: inherit;
+        font-size: 19px;
+        outline: none;
+        transition:
+          border-color 150ms ease,
+          background 150ms ease,
+        box-shadow 150ms ease;
+      }
+
+      .subscribe-card__input::placeholder {
+        color: #97a5bc;
+      }
+
+      .subscribe-card__input:focus {
+        border-color: #8cb3ff;
+        background: #ffffff;
+        box-shadow: 0 0 0 4px #e5edff;
+      }
+
+      .subscribe-card__hint {
+        margin: 2px 0 0;
+        font-size: 13px;
+        color: #6b7a90;
+      }
+
+      .subscribe-card__mono {
+        font-family: 'Space Mono', monospace;
+        color: #0f4fa8;
+      }
+
+      .subscribe-card__actions {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-top: 4px;
+      }
+
+      .subscribe-card__button {
+        border: 0;
+        border-radius: 14px;
+        background: linear-gradient(140deg, #0f172a 0%, #1f2937 100%);
+        color: #f8fafc;
+        font: inherit;
+        font-size: 17px;
+        font-weight: 800;
+        padding: 12px 20px;
+        cursor: pointer;
+        transition:
+          transform 140ms ease,
+          opacity 140ms ease,
+          box-shadow 140ms ease;
+        box-shadow: 0 10px 24px rgba(17, 24, 39, 0.2);
+      }
+
+      .subscribe-card__button:hover {
+        transform: translateY(-1px);
+      }
+
+      .subscribe-card__button:disabled {
+        opacity: 0.75;
+        cursor: wait;
+      }
+
+      .subscribe-card__status {
+        min-height: 22px;
+        font-size: 14px;
+        font-weight: 700;
+      }
+
+      .subscribe-card__status--success {
+        color: var(--good);
+      }
+
+      .subscribe-card__status--error {
+        color: var(--bad);
+      }
+
+      .insights-card {
+        padding: clamp(18px, 2.6vw, 28px);
+        display: grid;
+        gap: 12px;
+        opacity: 0;
+        transform: translateY(18px);
+        animation: enter 620ms ease 240ms forwards;
+      }
+
+      .insights-card__item {
+        border: 1px solid #d7e0ec;
+        border-radius: 16px;
+        background: linear-gradient(180deg, #fdfefe, #f7faff);
+        padding: 15px;
+        opacity: 0;
+        transform: translateY(10px);
+        animation: enter 430ms ease forwards;
+      }
+
+      .insights-card__item:nth-child(1) {
+        animation-delay: 260ms;
+      }
+      .insights-card__item:nth-child(2) {
+        animation-delay: 320ms;
+      }
+      .insights-card__item:nth-child(3) {
+        animation-delay: 380ms;
+      }
+
+      .insights-card__title {
+        margin: 0 0 6px;
+        font-size: 20px;
+        letter-spacing: -0.02em;
+      }
+
+      .insights-card__description {
+        margin: 0;
+        color: #56637a;
+        font-size: 17px;
+      }
+
+      @keyframes enter {
+        from {
+          opacity: 0;
+          transform: translateY(10px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      @media (min-width: 760px) {
+        .hero__inner {
+          grid-template-columns: 1.1fr 0.9fr;
+          align-items: center;
+          gap: 22px;
+        }
+
+        .content {
+          display: flex;
+          align-items: stretch;
+        }
+
+        .subscribe-card {
+          flex: 1.16;
+        }
+
+        .insights-card {
+          flex: 0.84;
+        }
+
+        .subscribe-card__form-grid {
+          grid-template-columns: 1fr 1fr;
+        }
+      }
+
+      @media (max-width: 759px) {
+        .subscribe-card__description {
+          font-size: 16px;
+        }
+
+        .subscribe-card__input {
+          font-size: 17px;
+        }
+
+        .insights-card__description {
+          font-size: 16px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="page">
+      <header class="page__header">
+        <div class="brand"><span class="brand__dot"></span>Release Radar</div>
+        <div class="page__build">v1.0 monolith</div>
+      </header>
+
+      <section class="hero">
+        <div class="hero__inner">
+          <div>
+            <div class="hero__badge">GitHub Release Alerts</div>
+            <h1 class="hero__title">Track Releases Without Refreshing</h1>
+          </div>
+          <p class="hero__subtitle">
+            Subscribe once and get notified by email when your selected
+            repository publishes a new release. Works with public repositories in
+            the <span class="hero__mono">owner/repo</span> format.
+          </p>
+        </div>
+      </section>
+
+      <section class="content">
+        <article class="card subscribe-card">
+          <div>
+            <h2 class="subscribe-card__title">Create Subscription</h2>
+            <p class="subscribe-card__description">
+              Submit your email and repository. We will send a confirmation link
+              before activating notifications.
+            </p>
+          </div>
+
+          <form id="subscribe-form" class="subscribe-card__form" novalidate>
+            <div class="subscribe-card__form-grid">
+              <div class="subscribe-card__field">
+                <label class="subscribe-card__label" for="email">Email</label>
+                <input
+                  class="subscribe-card__input"
+                  id="email"
+                  name="email"
+                  type="email"
+                  placeholder="you@example.com"
+                  required
+                />
+              </div>
+              <div class="subscribe-card__field">
+                <label class="subscribe-card__label" for="repository"
+                  >Repository</label
+                >
+                <input
+                  class="subscribe-card__input"
+                  id="repository"
+                  name="repository"
+                  type="text"
+                  placeholder="golang/go"
+                  required
+                />
+              </div>
+            </div>
+
+            <p class="subscribe-card__hint">
+              Repository format:
+              <span class="subscribe-card__mono">owner/repo</span>
+            </p>
+
+            <div class="subscribe-card__actions">
+              <button
+                id="submit-btn"
+                class="subscribe-card__button"
+                type="submit"
+              >
+                Subscribe
+              </button>
+              <span id="status" class="subscribe-card__status"></span>
+            </div>
+          </form>
+        </article>
+
+        <aside class="card insights-card">
+          <div class="insights-card__item">
+            <h3 class="insights-card__title">How It Works</h3>
+            <p class="insights-card__description">
+              The service checks releases in the background and sends email only
+              when a new tag appears.
+            </p>
+          </div>
+          <div class="insights-card__item">
+            <h3 class="insights-card__title">Confirmation Flow</h3>
+            <p class="insights-card__description">
+              You receive a confirmation email with activation and unsubscribe
+              links.
+            </p>
+          </div>
+          <div class="insights-card__item">
+            <h3 class="insights-card__title">Rate-Limit Aware</h3>
+            <p class="insights-card__description">
+              GitHub API errors are handled gracefully, including rate-limit
+              responses.
+            </p>
+          </div>
+        </aside>
+      </section>
+    </main>
+
+    <script>
+      const form = document.getElementById('subscribe-form');
+      const statusEl = document.getElementById('status');
+      const submitBtn = document.getElementById('submit-btn');
+
+      function setStatus(message, kind) {
+        statusEl.textContent = message;
+        statusEl.className = `subscribe-card__status ${
+          kind ? `subscribe-card__status--${kind}` : ''
+        }`;
+      }
+
+      async function parseApiResponse(response) {
+        const contentType = response.headers.get('content-type') || '';
+        if (contentType.includes('application/json')) {
+          return response.json();
+        }
+
+        const text = await response.text();
+        return { message: text || 'Request failed.' };
+      }
+
+      form.addEventListener('submit', async event => {
+        event.preventDefault();
+        setStatus('', '');
+
+        const formData = new FormData(form);
+        const email = String(formData.get('email') || '').trim();
+        const repository = String(formData.get('repository') || '').trim();
+
+        if (!email || !repository) {
+          setStatus('Please fill in both fields.', 'error');
+          return;
+        }
+
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Submitting...';
+
+        try {
+          const response = await fetch('/api/subscribe', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, repository }),
+          });
+
+          const payload = await parseApiResponse(response);
+          if (!response.ok) {
+            setStatus(payload.message || 'Request failed.', 'error');
+            return;
+          }
+
+          setStatus(
+            payload.message || 'Confirmation email sent. Please check your inbox.',
+            'success'
+          );
+          form.reset();
+        } catch (error) {
+          setStatus('Network error. Please try again.', 'error');
+          console.error(error);
+        } finally {
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'Subscribe';
+        }
+      });
+    </script>
+  </body>
+</html>

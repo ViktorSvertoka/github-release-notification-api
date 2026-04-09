@@ -3,6 +3,12 @@ import nodemailer from 'nodemailer';
 import type { Env } from '../config.js';
 
 export interface EmailNotifier {
+  sendSubscriptionConfirmationEmail(input: {
+    to: string;
+    repository: string;
+    confirmUrl: string;
+    unsubscribeUrl: string;
+  }): Promise<void>;
   sendNewReleaseEmail(input: {
     to: string;
     repository: string;
@@ -51,9 +57,37 @@ export class SmtpEmailNotifier implements EmailNotifier {
       ].join('\n'),
     });
   }
+
+  public async sendSubscriptionConfirmationEmail(input: {
+    to: string;
+    repository: string;
+    confirmUrl: string;
+    unsubscribeUrl: string;
+  }): Promise<void> {
+    await this.transporter.sendMail({
+      from: this.from,
+      to: input.to,
+      subject: `Confirm subscription for ${input.repository}`,
+      text: [
+        `You requested release notifications for ${input.repository}.`,
+        `Confirm subscription: ${input.confirmUrl}`,
+        `Unsubscribe: ${input.unsubscribeUrl}`,
+      ].join('\n'),
+    });
+  }
 }
 
 export class NoopEmailNotifier implements EmailNotifier {
+  public async sendSubscriptionConfirmationEmail(input: {
+    to: string;
+    repository: string;
+    confirmUrl: string;
+    unsubscribeUrl: string;
+  }): Promise<void> {
+    void input;
+    // Intentionally no-op for environments without SMTP config.
+  }
+
   public async sendNewReleaseEmail(input: {
     to: string;
     repository: string;
