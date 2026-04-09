@@ -4,6 +4,7 @@ import { pinoHttp } from 'pino-http';
 
 import { createApiKeyAuthMiddleware } from './middleware/api-key-auth.js';
 import { AppError } from './errors.js';
+import { getMetricsContentType, getMetricsSnapshot, recordHttpRequest } from './metrics/metrics.js';
 import { registerSubscriptionRoutes } from './subscriptions/subscription-routes.js';
 import type { SubscriptionService } from './subscriptions/subscription-service.js';
 
@@ -22,6 +23,22 @@ export function createApp(dependencies: CreateAppDependencies) {
     })
   );
   app.use(express.json());
+
+  app.use((req, res, next) => {
+    const startedAt = process.hrtime.bigint();
+    res.on('finish', () => {
+      const elapsedNs = Number(process.hrtime.bigint() - startedAt);
+      const durationSeconds = elapsedNs / 1_000_000_000;
+      const route = normalizeRoute(req.baseUrl + req.path);
+      recordHttpRequest({
+        method: req.method,
+        route,
+        statusCode: res.statusCode,
+        durationSeconds,
+      });
+    });
+    next();
+  });
   app.use(express.static(publicDir));
 
   app.get('/', (_req, res) => {
@@ -30,6 +47,12 @@ export function createApp(dependencies: CreateAppDependencies) {
 
   app.get('/health', (_req, res) => {
     res.status(200).json({ status: 'ok' });
+  });
+
+  app.get('/metrics', async (_req, res) => {
+    const snapshot = await getMetricsSnapshot();
+    res.setHeader('Content-Type', getMetricsContentType());
+    res.send(snapshot);
   });
 
   app.use('/api', createApiKeyAuthMiddleware(dependencies.apiKey));
@@ -49,4 +72,28 @@ export function createApp(dependencies: CreateAppDependencies) {
   app.use(errorHandler);
 
   return app;
+}
+
+function normalizeRoute(pathname: string): string {
+  const fixedRoutes = new Set([
+    '/',
+    '/health',
+    '/metrics',
+    '/api/subscribe',
+    '/api/subscriptions',
+  ]);
+
+  if (fixedRoutes.has(pathname)) {
+    return pathname;
+  }
+
+  if (/^\/api\/confirm\/[^/]+$/.test(pathname)) {
+    return '/api/confirm/:token';
+  }
+
+  if (/^\/api\/unsubscribe\/[^/]+$/.test(pathname)) {
+    return '/api/unsubscribe/:token';
+  }
+
+  return 'unmatched';
 }

@@ -3,6 +3,7 @@ import type {
   GitHubRelease,
   GitHubRepositoryClient,
 } from '../github/github-repository-client.js';
+import { recordScannerRun } from '../metrics/metrics.js';
 import type { EmailNotifier } from '../notifier/email-notifier.js';
 import type { SubscriptionRepository } from '../subscriptions/subscription-repository.js';
 
@@ -21,25 +22,47 @@ export class ReleaseScanner {
   ) {}
 
   public async runOnce(): Promise<void> {
-    const tracked = await this.subscriptionRepository.listTrackedRepositories();
-    for (const item of tracked) {
-      try {
-        const release = await this.gitHubClient.getLatestRelease(item.repository);
-        await this.handleRepositoryRelease(item, release);
-      } catch (error) {
-        if (error instanceof RateLimitError) {
-          this.logger.warn(
-            { repository: item.repository, error: error.message },
-            'Release scan skipped due to GitHub rate limit'
-          );
-          break;
-        }
+    let outcome: 'success' | 'partial_failure' | 'rate_limited' = 'success';
+    try {
+      const tracked = await this.subscriptionRepository.listTrackedRepositories();
+      let hasFailures = false;
 
-        this.logger.error(
-          { repository: item.repository, error },
-          'Release scan failed for repository'
-        );
+      for (const item of tracked) {
+        try {
+          const release = await this.gitHubClient.getLatestRelease(item.repository);
+          const hadDeliveryFailure = await this.handleRepositoryRelease(
+            item,
+            release
+          );
+          if (hadDeliveryFailure) {
+            hasFailures = true;
+          }
+        } catch (error) {
+          if (error instanceof RateLimitError) {
+            this.logger.warn(
+              { repository: item.repository, error: error.message },
+              'Release scan skipped due to GitHub rate limit'
+            );
+            outcome = 'rate_limited';
+            return;
+          }
+
+          hasFailures = true;
+          this.logger.error(
+            { repository: item.repository, error },
+            'Release scan failed for repository'
+          );
+        }
       }
+
+      if (hasFailures) {
+        outcome = 'partial_failure';
+      }
+    } catch (error) {
+      outcome = 'partial_failure';
+      throw error;
+    } finally {
+      recordScannerRun(outcome);
     }
   }
 
@@ -50,9 +73,9 @@ export class ReleaseScanner {
       subscriberEmails: string[];
     },
     release: GitHubRelease | null
-  ): Promise<void> {
+  ): Promise<boolean> {
     if (!release) {
-      return;
+      return false;
     }
 
     if (item.lastSeenTag === null) {
@@ -64,11 +87,11 @@ export class ReleaseScanner {
         { repository: item.repository, tag: release.tagName },
         'Initialized last seen tag'
       );
-      return;
+      return false;
     }
 
     if (item.lastSeenTag === release.tagName) {
-      return;
+      return false;
     }
 
     const deliveredEmails = new Set(
@@ -122,7 +145,7 @@ export class ReleaseScanner {
         },
         'Release notifications partially delivered; will retry next scan'
       );
-      return;
+      return true;
     }
 
     await this.subscriptionRepository.updateLastSeenTag(
@@ -137,5 +160,6 @@ export class ReleaseScanner {
       },
       'Sent release notifications'
     );
+    return false;
   }
 }
