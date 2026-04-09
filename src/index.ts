@@ -5,6 +5,7 @@ import { RedisGitHubCache } from './cache/redis-github-cache.js';
 import { loadRuntimeEnv } from './config.js';
 import { createDbClient } from './db/client.js';
 import { runMigrations } from './db/migrate.js';
+import { createSubscriptionGrpcServer } from './grpc/subscription-grpc-server.js';
 import { HttpGitHubRepositoryClient } from './github/github-repository-client.js';
 import {
   NoopEmailNotifier,
@@ -48,6 +49,11 @@ async function bootstrap(): Promise<void> {
     emailNotifier,
     logger
   );
+  const grpcServer = createSubscriptionGrpcServer({
+    subscriptionService,
+    port: env.GRPC_PORT,
+  });
+  await grpcServer.start();
   const scannerScheduler = startScannerScheduler({
     scanner: releaseScanner,
     intervalSeconds: env.SCAN_INTERVAL_SECONDS,
@@ -59,7 +65,11 @@ async function bootstrap(): Promise<void> {
   const app = createApp({ subscriptionService, apiKey: env.API_KEY });
   const server = app.listen(env.PORT, () => {
     logger.info(
-      { port: env.PORT, scanIntervalSeconds: env.SCAN_INTERVAL_SECONDS },
+      {
+        port: env.PORT,
+        grpcPort: env.GRPC_PORT,
+        scanIntervalSeconds: env.SCAN_INTERVAL_SECONDS,
+      },
       'Server started'
     );
   });
@@ -82,6 +92,7 @@ async function bootstrap(): Promise<void> {
         resolve();
       });
     });
+    await grpcServer.shutdown();
     await pool.end();
     logger.info('Graceful shutdown completed');
     process.exit(0);

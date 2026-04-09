@@ -5,9 +5,11 @@ services:
       dockerfile: Dockerfile
     ports:
       - '3000:3000'
+      - '50051:50051'
     environment:
       NODE_ENV: development
       PORT: 3000
+      GRPC_PORT: 50051
       APP_BASE_URL: http://localhost:3000
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/release_notifications?sslmode=disable
       REDIS_URL: redis://redis:6379
