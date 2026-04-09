@@ -3,9 +3,12 @@ services:
     name: github-release-notification-api
     runtime: docker
     autoDeploy: true
+    healthCheckPath: /health
     envVars:
       - key: NODE_ENV
         value: production
+      - key: GRPC_PORT
+        value: 50051
       - key: GITHUB_TOKEN
         sync: false
       - key: APP_BASE_URL

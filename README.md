@@ -44,6 +44,7 @@ docker compose up --build
 This starts:
 
 - API on `http://localhost:3000`
+- gRPC on `localhost:50051`
 - PostgreSQL on `localhost:5432`
 - Redis on `localhost:6379`
 
@@ -57,6 +58,68 @@ This project is prepared for:
 
 `render.yaml` is included as a base Render blueprint.
 
+## Deploy End-to-End (Render + Neon + Upstash)
+
+### 1. Prepare managed services
+
+- Create Neon project and database, copy connection string.
+- Create Upstash Redis database, copy TCP connection string.
+  - Use TCP URI format for this app: `rediss://default:<token>@<host>:6379`
+- Prepare SMTP credentials (for example Mailtrap/SendGrid/Resend SMTP) to test
+  confirmation/release emails in production.
+
+### 2. Create Render Web Service
+
+- Push repository to GitHub.
+- In Render: `New` -> `Blueprint` -> select this repository.
+- Render will read [render.yaml](./render.yaml) and create one Docker web service.
+
+### 3. Set production environment variables in Render
+
+Required:
+
+- `NODE_ENV=production`
+- `APP_BASE_URL=https://<your-render-service>.onrender.com`
+- `DATABASE_URL=<Neon connection string with sslmode=require>`
+- `REDIS_URL=<Upstash TCP rediss URL>`
+- `SMTP_HOST=<smtp host>`
+- `SMTP_PORT=587`
+- `SMTP_USER=<smtp user>`
+- `SMTP_PASS=<smtp password>`
+- `SMTP_FROM=<verified sender>`
+
+Recommended:
+
+- `GITHUB_TOKEN=<github token>` (higher rate limit)
+- `SCAN_INTERVAL_SECONDS=300`
+- `CACHE_TTL_SECONDS=600`
+- `API_KEY=<token>` (if you want protected `/api/*` endpoints)
+
+### 4. Verify deployment
+
+- Open `https://<your-render-service>.onrender.com/health` -> expect
+  `{"status":"ok"}`.
+- Open `https://<your-render-service>.onrender.com/metrics` -> expect Prometheus
+  metrics output.
+
+### 5. Verify real flow in production
+
+1. Submit subscription from HTML page `GET /` or API:
+
+```bash
+curl -X POST "https://<your-render-service>.onrender.com/api/subscribe" \
+  -H "Content-Type: application/json" \
+  -d '{"email":"you@example.com","repository":"golang/go"}'
+```
+
+2. Open confirmation email from your SMTP inbox and click:
+   `GET /api/confirm/{token}`.
+3. Wait for scanner interval (or temporarily set `SCAN_INTERVAL_SECONDS=60` in
+   Render for faster test).
+4. Publish/check a repository with a new release tag and verify release email
+   is delivered.
+5. Click `GET /api/unsubscribe/{token}` and confirm notifications stop.
+
 ## Environment variables
 
 See [.env.example](./.env.example) for the full list.
@@ -65,6 +128,7 @@ Core variables:
 
 - `NODE_ENV`
 - `PORT`
+- `GRPC_PORT`
 - `APP_BASE_URL`
 - `GITHUB_TOKEN`
 - `DATABASE_URL`
@@ -123,6 +187,25 @@ Core variables:
 ## API contract
 
 OpenAPI contract is available in [swagger.yaml](./swagger.yaml).
+
+## gRPC interface (optional extra)
+
+- Proto file: [proto/release_notification.proto](./proto/release_notification.proto)
+- gRPC server runs in the same monolith process as REST API.
+- Default port: `50051` (`GRPC_PORT` env var).
+- Implemented RPC methods:
+  - `Subscribe`
+  - `Confirm`
+  - `Unsubscribe`
+  - `ListSubscriptions`
+
+Quick local check with `grpcurl`:
+
+```bash
+grpcurl -plaintext \
+  -d '{"email":"you@example.com","repository":"golang/go"}' \
+  localhost:50051 release_notification.v1.SubscriptionService/Subscribe
+```
 
 ## Subscription page
 

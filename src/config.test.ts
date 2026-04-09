@@ -10,12 +10,14 @@ describe('parseEnv', () => {
 
     expect(parsed.NODE_ENV).toBe('test');
     expect(parsed.PORT).toBe(3000);
+    expect(parsed.GRPC_PORT).toBe(50051);
   });
 
   it('parses provided values', () => {
     const parsed = parseEnv({
       NODE_ENV: 'production',
       PORT: '8080',
+      GRPC_PORT: '60000',
       APP_BASE_URL: 'https://example.com',
       DATABASE_URL:
         'postgresql://postgres:postgres@localhost:5432/release_notifications?sslmode=disable',
@@ -23,6 +25,7 @@ describe('parseEnv', () => {
 
     expect(parsed.NODE_ENV).toBe('production');
     expect(parsed.PORT).toBe(8080);
+    expect(parsed.GRPC_PORT).toBe(60000);
   });
 
   it('throws when DATABASE_URL is missing outside test env', () => {

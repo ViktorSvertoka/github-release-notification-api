@@ -1,0 +1,32 @@
+syntax = "proto3";
+
+package release_notification.v1;
+
+service SubscriptionService {
+  rpc Subscribe(SubscribeRequest) returns (MessageResponse);
+  rpc Confirm(TokenRequest) returns (MessageResponse);
+  rpc Unsubscribe(TokenRequest) returns (MessageResponse);
+  rpc ListSubscriptions(ListSubscriptionsRequest) returns (SubscriptionsResponse);
+}
+
+message SubscribeRequest {
+  string email = 1;
+  string repository = 2;
+}
+
+message TokenRequest {
+  string token = 1;
+}
+
+message ListSubscriptionsRequest {
+  string email = 1;
+}
+
+message MessageResponse {
+  string message = 1;
+}
+
+message SubscriptionsResponse {
+  string email = 1;
+  repeated string subscriptions = 2;
+}
