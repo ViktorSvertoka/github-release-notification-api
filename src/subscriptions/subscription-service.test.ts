@@ -6,6 +6,7 @@ import {
   ValidationError,
 } from '../errors.js';
 import type { GitHubRepositoryClient } from '../github/github-repository-client.js';
+import type { EmailNotifier } from '../notifier/email-notifier.js';
 import { InMemorySubscriptionRepository } from './subscription-repository.js';
 import { SubscriptionService } from './subscription-service.js';
 
@@ -35,16 +36,50 @@ class FakeGitHubClient implements GitHubRepositoryClient {
   }
 }
 
+class FakeEmailNotifier implements EmailNotifier {
+  public confirmationCalls: Array<{
+    to: string;
+    repository: string;
+    confirmUrl: string;
+    unsubscribeUrl: string;
+  }> = [];
+
+  public async sendSubscriptionConfirmationEmail(input: {
+    to: string;
+    repository: string;
+    confirmUrl: string;
+    unsubscribeUrl: string;
+  }): Promise<void> {
+    this.confirmationCalls.push(input);
+  }
+
+  public async sendNewReleaseEmail(input: {
+    to: string;
+    repository: string;
+    tagName: string;
+    releaseUrl: string;
+  }): Promise<void> {
+    void input;
+    // Not used in this suite.
+  }
+}
+
 function setup(mode: 'exists' | 'missing' | 'rate-limit' | 'error') {
   const repository = new InMemorySubscriptionRepository();
   const gitHubClient = new FakeGitHubClient(mode);
-  const service = new SubscriptionService(repository, gitHubClient);
-  return { service, repository };
+  const emailNotifier = new FakeEmailNotifier();
+  const service = new SubscriptionService(
+    repository,
+    gitHubClient,
+    emailNotifier,
+    'http://localhost:3000'
+  );
+  return { service, repository, emailNotifier };
 }
 
 describe('SubscriptionService', () => {
   it('subscribes with valid payload', async () => {
-    const { service } = setup('exists');
+    const { service, emailNotifier } = setup('exists');
 
     const response = await service.subscribe({
       email: 'User@Example.com',
@@ -54,6 +89,13 @@ describe('SubscriptionService', () => {
     expect(response).toEqual({
       message: 'Confirmation email sent. Please check your inbox.',
     });
+    expect(emailNotifier.confirmationCalls).toHaveLength(1);
+    expect(emailNotifier.confirmationCalls[0]?.confirmUrl).toContain(
+      '/api/confirm/'
+    );
+    expect(emailNotifier.confirmationCalls[0]?.unsubscribeUrl).toContain(
+      '/api/unsubscribe/'
+    );
   });
 
   it('throws 400 for invalid repository format', async () => {

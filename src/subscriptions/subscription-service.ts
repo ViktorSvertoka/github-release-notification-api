@@ -8,6 +8,7 @@ import {
   ValidationError,
 } from '../errors.js';
 import type { GitHubRepositoryClient } from '../github/github-repository-client.js';
+import type { EmailNotifier } from '../notifier/email-notifier.js';
 import type { SubscriptionRepository } from './subscription-repository.js';
 
 const subscribeInputSchema = z.object({
@@ -20,7 +21,9 @@ const emailSchema = z.email();
 export class SubscriptionService {
   constructor(
     private readonly repository: SubscriptionRepository,
-    private readonly gitHubClient: GitHubRepositoryClient
+    private readonly gitHubClient: GitHubRepositoryClient,
+    private readonly emailNotifier: EmailNotifier,
+    private readonly appBaseUrl: string
   ) {}
 
   public async subscribe(input: {
@@ -57,11 +60,17 @@ export class SubscriptionService {
       throw new NotFoundError('Repository not found.');
     }
 
-    await this.repository.upsertPending({
+    const subscription = await this.repository.upsertPending({
       email: normalizedEmail,
       repository,
       confirmToken: this.generateToken(),
       unsubscribeToken: this.generateToken(),
+    });
+    await this.emailNotifier.sendSubscriptionConfirmationEmail({
+      to: normalizedEmail,
+      repository,
+      confirmUrl: this.buildConfirmUrl(subscription.confirmToken),
+      unsubscribeUrl: this.buildUnsubscribeUrl(subscription.unsubscribeToken),
     });
 
     return {
@@ -127,5 +136,15 @@ export class SubscriptionService {
 
   private generateToken(): string {
     return crypto.randomBytes(24).toString('hex');
+  }
+
+  private buildConfirmUrl(token: string): string {
+    const baseUrl = this.appBaseUrl.replace(/\/+$/, '');
+    return `${baseUrl}/api/confirm/${token}`;
+  }
+
+  private buildUnsubscribeUrl(token: string): string {
+    const baseUrl = this.appBaseUrl.replace(/\/+$/, '');
+    return `${baseUrl}/api/unsubscribe/${token}`;
   }
 }

@@ -65,6 +65,7 @@ Core variables:
 
 - `NODE_ENV`
 - `PORT`
+- `APP_BASE_URL`
 - `GITHUB_TOKEN`
 - `DATABASE_URL`
 - `REDIS_URL`
@@ -97,10 +98,18 @@ Core variables:
   - if `last_seen_tag` is empty, scanner initializes it and does not send email
   - if latest tag differs from `last_seen_tag`, scanner sends email to active subscribers and updates `last_seen_tag`
 - SMTP notifier is enabled only when all required SMTP variables are provided
+- `POST /api/subscribe` sends a confirmation email with links to:
+  - `GET /api/confirm/{token}`
+  - `GET /api/unsubscribe/{token}`
 
 ## API contract
 
 OpenAPI contract is available in [swagger.yaml](./swagger.yaml).
+
+## Subscription page
+
+- `GET /` serves a responsive HTML subscription page
+- the page submits to `POST /api/subscribe`
 
 Healthcheck endpoint:
 

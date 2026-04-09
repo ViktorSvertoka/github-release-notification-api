@@ -11,6 +11,7 @@ const envSchema = z.object({
     .enum(['development', 'test', 'production'])
     .default('development'),
   PORT: z.coerce.number().int().positive().default(3000),
+  APP_BASE_URL: z.string().url().default('http://localhost:3000'),
   GITHUB_TOKEN: optionalString,
   DATABASE_URL: z.preprocess(
     value => (typeof value === 'string' && value.trim() === '' ? undefined : value),

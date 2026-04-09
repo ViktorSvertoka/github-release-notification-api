@@ -8,6 +8,7 @@ services:
     environment:
       NODE_ENV: development
       PORT: 3000
+      APP_BASE_URL: http://localhost:3000
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/release_notifications?sslmode=disable
       REDIS_URL: redis://redis:6379
       CACHE_TTL_SECONDS: 600

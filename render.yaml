@@ -8,6 +8,8 @@ services:
         value: production
       - key: GITHUB_TOKEN
         sync: false
+      - key: APP_BASE_URL
+        sync: false
       - key: DATABASE_URL
         sync: false
       - key: REDIS_URL
