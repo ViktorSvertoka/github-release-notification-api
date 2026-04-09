@@ -5,6 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.0.2] - 2026-04-09
+
+### Added
+
+- README visual showcase with screenshots for implemented features:
+  - home page
+  - confirmation email
+  - confirm/unsubscribe browser flow
+  - Render deployment
+  - Neon database
+  - Upstash Redis cache
+  - Prometheus metrics
+  - GitHub Actions CI
+
+### Changed
+
+- New release notification emails now use branded HTML template with:
+  - repository and tag highlights
+  - `View release` CTA button
+  - fallback direct URL link
+
 ## [1.0.1] - 2026-04-09
 
 ### Added
