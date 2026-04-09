@@ -1,6 +1,7 @@
 import nodemailer from 'nodemailer';
 
 import type { Env } from '../config.js';
+import { recordEmailNotification } from '../metrics/metrics.js';
 
 export interface EmailNotifier {
   sendSubscriptionConfirmationEmail(input: {
@@ -46,16 +47,22 @@ export class SmtpEmailNotifier implements EmailNotifier {
     tagName: string;
     releaseUrl: string;
   }): Promise<void> {
-    await this.transporter.sendMail({
-      from: this.from,
-      to: input.to,
-      subject: `New release in ${input.repository}: ${input.tagName}`,
-      text: [
-        `A new release was published in ${input.repository}.`,
-        `Tag: ${input.tagName}`,
-        `URL: ${input.releaseUrl}`,
-      ].join('\n'),
-    });
+    try {
+      await this.transporter.sendMail({
+        from: this.from,
+        to: input.to,
+        subject: `New release in ${input.repository}: ${input.tagName}`,
+        text: [
+          `A new release was published in ${input.repository}.`,
+          `Tag: ${input.tagName}`,
+          `URL: ${input.releaseUrl}`,
+        ].join('\n'),
+      });
+      recordEmailNotification({ type: 'release', result: 'success' });
+    } catch (error) {
+      recordEmailNotification({ type: 'release', result: 'failed' });
+      throw error;
+    }
   }
 
   public async sendSubscriptionConfirmationEmail(input: {
@@ -64,16 +71,22 @@ export class SmtpEmailNotifier implements EmailNotifier {
     confirmUrl: string;
     unsubscribeUrl: string;
   }): Promise<void> {
-    await this.transporter.sendMail({
-      from: this.from,
-      to: input.to,
-      subject: `Confirm subscription for ${input.repository}`,
-      text: [
-        `You requested release notifications for ${input.repository}.`,
-        `Confirm subscription: ${input.confirmUrl}`,
-        `Unsubscribe: ${input.unsubscribeUrl}`,
-      ].join('\n'),
-    });
+    try {
+      await this.transporter.sendMail({
+        from: this.from,
+        to: input.to,
+        subject: `Confirm subscription for ${input.repository}`,
+        text: [
+          `You requested release notifications for ${input.repository}.`,
+          `Confirm subscription: ${input.confirmUrl}`,
+          `Unsubscribe: ${input.unsubscribeUrl}`,
+        ].join('\n'),
+      });
+      recordEmailNotification({ type: 'confirmation', result: 'success' });
+    } catch (error) {
+      recordEmailNotification({ type: 'confirmation', result: 'failed' });
+      throw error;
+    }
   }
 }
 
@@ -85,6 +98,7 @@ export class NoopEmailNotifier implements EmailNotifier {
     unsubscribeUrl: string;
   }): Promise<void> {
     void input;
+    recordEmailNotification({ type: 'confirmation', result: 'skipped' });
     // Intentionally no-op for environments without SMTP config.
   }
 
@@ -95,6 +109,7 @@ export class NoopEmailNotifier implements EmailNotifier {
     releaseUrl: string;
   }): Promise<void> {
     void input;
+    recordEmailNotification({ type: 'release', result: 'skipped' });
     // Intentionally no-op for environments without SMTP config.
   }
 }

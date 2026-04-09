@@ -110,6 +110,16 @@ Core variables:
   - `GET /api/confirm/{token}`
   - `GET /api/unsubscribe/{token}`
 
+## Prometheus metrics
+
+- `GET /metrics` exposes Prometheus metrics
+- Includes:
+  - HTTP requests count (`app_http_requests_total`)
+  - HTTP request duration (`app_http_request_duration_seconds`)
+  - Scanner runs (`app_scanner_runs_total`)
+  - Email notifications (`app_email_notifications_total`)
+  - GitHub rate-limit errors (`app_github_rate_limit_errors_total`)
+
 ## API contract
 
 OpenAPI contract is available in [swagger.yaml](./swagger.yaml).

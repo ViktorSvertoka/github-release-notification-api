@@ -1,5 +1,6 @@
 import { RateLimitError } from '../errors.js';
 import type { GitHubCache } from '../cache/github-cache.js';
+import { recordGitHubRateLimitError } from '../metrics/metrics.js';
 
 export interface GitHubRelease {
   tagName: string;
@@ -66,6 +67,7 @@ export class HttpGitHubRepositoryClient implements GitHubRepositoryClient {
     }
 
     if (response.status === 429) {
+      recordGitHubRateLimitError('repository_exists');
       throw new RateLimitError(
         'GitHub API rate limit exceeded. Try again later.'
       );
@@ -75,6 +77,7 @@ export class HttpGitHubRepositoryClient implements GitHubRepositoryClient {
       response.status === 403 &&
       response.headers.get('x-ratelimit-remaining') === '0'
     ) {
+      recordGitHubRateLimitError('repository_exists');
       throw new RateLimitError(
         'GitHub API rate limit exceeded. Try again later.'
       );
@@ -120,6 +123,7 @@ export class HttpGitHubRepositoryClient implements GitHubRepositoryClient {
     }
 
     if (response.status === 429) {
+      recordGitHubRateLimitError('latest_release');
       throw new RateLimitError(
         'GitHub API rate limit exceeded. Try again later.'
       );
@@ -129,6 +133,7 @@ export class HttpGitHubRepositoryClient implements GitHubRepositoryClient {
       response.status === 403 &&
       response.headers.get('x-ratelimit-remaining') === '0'
     ) {
+      recordGitHubRateLimitError('latest_release');
       throw new RateLimitError(
         'GitHub API rate limit exceeded. Try again later.'
       );
