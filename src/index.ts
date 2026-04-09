@@ -63,7 +63,7 @@ async function bootstrap(): Promise<void> {
   });
 
   const app = createApp({ subscriptionService, apiKey: env.API_KEY });
-  const server = app.listen(env.PORT, () => {
+  const server = app.listen(env.PORT, '0.0.0.0', () => {
     logger.info(
       {
         port: env.PORT,
