@@ -27,6 +27,13 @@ subscriptions.
 - `npm run db:generate` - generate Drizzle migrations
 - `npm run db:migrate` - apply migrations
 
+## Clone project
+
+```bash
+git clone https://github.com/ViktorSvertoka/github-release-notification-api.git
+cd github-release-notification-api
+```
+
 ## Local run (without Docker)
 
 ```bash
@@ -269,46 +276,64 @@ Healthcheck endpoint:
 
 ![Unsubscribe](./assets/04-unsubscribe.png)
 
-### 5) Production deployment (Render)
+### 5) New release notification email
+
+- Styled HTML email for newly detected repository releases
+- Contains release metadata (repository + tag)
+- Includes direct `View release` CTA link
+
+![Release Notification Email](./assets/05-release-notification-email.png)
+
+### 6) Production deployment (Render)
 
 - Monolith deployed and running on Render
 - Healthcheck and API endpoints available publicly
 - Runtime environment configured via environment variables
 
-![Render Deployment](./assets/05-render-deployment.png)
+![Render Deployment](./assets/06-render-deployment.png)
 
-### 6) PostgreSQL database (Neon)
+### 7) PostgreSQL database (Neon)
 
 - Persistent storage for repositories/subscriptions/deliveries
 - Drizzle migrations executed on startup
 - Production data hosted on Neon
 
-![Neon Database](./assets/06-neon-database1.png)
+![Neon Database](./assets/07-neon-database1.png)
 
-![Neon Database](./assets/06-neon-database2.png)
+![Neon Database](./assets/07-neon-database2.png)
 
-![Neon Database](./assets/06-neon-database3.png)
+![Neon Database](./assets/07-neon-database3.png)
 
-### 7) Redis cache (Upstash Redis)
+### 8) Redis cache (Upstash Redis)
 
 - GitHub API response caching with TTL = 10 minutes
 - Reduces external API calls and improves stability
 - Used for repository existence and release lookup optimization
 
-![Redis Cache](./assets/07-redis-cache.png)
+![Redis Cache](./assets/08-redis-cache.png)
 
-### 8) Prometheus metrics
+### 9) Prometheus metrics
 
 - `/metrics` endpoint exposed for observability
 - Includes HTTP, scanner, email, and GitHub rate-limit metrics
 - Ready for Prometheus scraping and dashboarding
 
-![Prometheus Metrics](./assets/08-prometheus-metrics.png)
+![Prometheus Metrics](./assets/09-prometheus-metrics.png)
 
-### 9) CI pipeline (GitHub Actions)
+### 10) CI pipeline (GitHub Actions)
 
 - Automated lint and unit tests on every push and pull request
 - Prevents regressions before merge
 - Enforces baseline code quality checks
 
-![GitHub Actions CI](./assets/09-github-actions-ci.png)
+![GitHub Actions CI](./assets/10-github-actions-ci.png)
+
+### 11) Swagger API documentation
+
+- OpenAPI contract visualized in Swagger Editor
+- Includes all required subscription endpoints and schemas
+- Used for API contract verification and reviewer-friendly navigation
+
+![Swagger Documentation](./assets/11-swagger-documentation1.png)
+
+![Swagger Documentation](./assets/11-swagger-documentation2.png)
