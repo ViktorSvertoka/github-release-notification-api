@@ -483,6 +483,16 @@
         }`;
       }
 
+      async function parseApiResponse(response) {
+        const contentType = response.headers.get('content-type') || '';
+        if (contentType.includes('application/json')) {
+          return response.json();
+        }
+
+        const text = await response.text();
+        return { message: text || 'Request failed.' };
+      }
+
       form.addEventListener('submit', async event => {
         event.preventDefault();
         setStatus('', '');
@@ -506,7 +516,7 @@
             body: JSON.stringify({ email, repository }),
           });
 
-          const payload = await response.json();
+          const payload = await parseApiResponse(response);
           if (!response.ok) {
             setStatus(payload.message || 'Request failed.', 'error');
             return;

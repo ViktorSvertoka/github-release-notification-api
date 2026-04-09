@@ -11,7 +11,10 @@ const envSchema = z.object({
     .enum(['development', 'test', 'production'])
     .default('development'),
   PORT: z.coerce.number().int().positive().default(3000),
-  APP_BASE_URL: z.string().url().default('http://localhost:3000'),
+  APP_BASE_URL: z.preprocess(
+    value => (typeof value === 'string' && value.trim() === '' ? undefined : value),
+    z.string().url().optional()
+  ),
   GITHUB_TOKEN: optionalString,
   DATABASE_URL: z.preprocess(
     value => (typeof value === 'string' && value.trim() === '' ? undefined : value),
@@ -34,7 +37,8 @@ const envSchema = z.object({
   API_KEY: optionalString,
 });
 
-export type Env = z.infer<typeof envSchema>;
+type ParsedEnv = z.infer<typeof envSchema>;
+export type Env = Omit<ParsedEnv, 'APP_BASE_URL'> & { APP_BASE_URL: string };
 
 export function parseEnv(input: Record<string, string | undefined>): Env {
   const parsed = envSchema.parse(input);
@@ -43,7 +47,14 @@ export function parseEnv(input: Record<string, string | undefined>): Env {
     throw new Error('DATABASE_URL is required.');
   }
 
-  return parsed;
+  if (parsed.NODE_ENV === 'production' && !parsed.APP_BASE_URL) {
+    throw new Error('APP_BASE_URL is required in production.');
+  }
+
+  return {
+    ...parsed,
+    APP_BASE_URL: parsed.APP_BASE_URL ?? 'http://localhost:3000',
+  };
 }
 
 export function loadRuntimeEnv(): Env {

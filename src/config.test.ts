@@ -16,6 +16,7 @@ describe('parseEnv', () => {
     const parsed = parseEnv({
       NODE_ENV: 'production',
       PORT: '8080',
+      APP_BASE_URL: 'https://example.com',
       DATABASE_URL:
         'postgresql://postgres:postgres@localhost:5432/release_notifications?sslmode=disable',
     });
@@ -30,5 +31,15 @@ describe('parseEnv', () => {
         NODE_ENV: 'development',
       })
     ).toThrow('DATABASE_URL is required.');
+  });
+
+  it('throws when APP_BASE_URL is missing in production', () => {
+    expect(() =>
+      parseEnv({
+        NODE_ENV: 'production',
+        DATABASE_URL:
+          'postgresql://postgres:postgres@localhost:5432/release_notifications?sslmode=disable',
+      })
+    ).toThrow('APP_BASE_URL is required in production.');
   });
 });
