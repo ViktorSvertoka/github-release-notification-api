@@ -102,6 +102,14 @@ Core variables:
   - `GET /api/confirm/{token}`
   - `GET /api/unsubscribe/{token}`
 
+## API key auth (optional)
+
+- Set `API_KEY` to enable API key protection for `/api/*`
+- Send token via `x-api-key` request header
+- Public exceptions (no API key required):
+  - `GET /api/confirm/{token}`
+  - `GET /api/unsubscribe/{token}`
+
 ## API contract
 
 OpenAPI contract is available in [swagger.yaml](./swagger.yaml).

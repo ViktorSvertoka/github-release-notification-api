@@ -2,12 +2,14 @@ import express, { type ErrorRequestHandler } from 'express';
 import path from 'node:path';
 import { pinoHttp } from 'pino-http';
 
+import { createApiKeyAuthMiddleware } from './middleware/api-key-auth.js';
 import { AppError } from './errors.js';
 import { registerSubscriptionRoutes } from './subscriptions/subscription-routes.js';
 import type { SubscriptionService } from './subscriptions/subscription-service.js';
 
 interface CreateAppDependencies {
   subscriptionService: SubscriptionService;
+  apiKey?: string;
 }
 
 export function createApp(dependencies: CreateAppDependencies) {
@@ -29,6 +31,8 @@ export function createApp(dependencies: CreateAppDependencies) {
   app.get('/health', (_req, res) => {
     res.status(200).json({ status: 'ok' });
   });
+
+  app.use('/api', createApiKeyAuthMiddleware(dependencies.apiKey));
 
   registerSubscriptionRoutes(app, dependencies.subscriptionService);
 
