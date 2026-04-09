@@ -72,7 +72,8 @@ This project is prepared for:
 
 - Push repository to GitHub.
 - In Render: `New` -> `Blueprint` -> select this repository.
-- Render will read [render.yaml](./render.yaml) and create one Docker web service.
+- Render will read [render.yaml](./render.yaml) and create one Docker web
+  service.
 
 ### 3. Set production environment variables in Render
 
@@ -116,8 +117,8 @@ curl -X POST "https://<your-render-service>.onrender.com/api/subscribe" \
    `GET /confirm/{token}` (browser UX route).
 3. Wait for scanner interval (or temporarily set `SCAN_INTERVAL_SECONDS=60` in
    Render for faster test).
-4. Publish/check a repository with a new release tag and verify release email
-   is delivered.
+4. Publish/check a repository with a new release tag and verify release email is
+   delivered.
 5. Click `GET /unsubscribe/{token}` and confirm notifications stop.
 
 ## Environment variables
@@ -157,10 +158,12 @@ Core variables:
 ## Scanner and notifier
 
 - Release scanner runs every `SCAN_INTERVAL_SECONDS` (default `300`)
-- Scanner checks latest release for tracked repositories with active subscriptions
+- Scanner checks latest release for tracked repositories with active
+  subscriptions
 - New tag detection logic:
   - if `last_seen_tag` is empty, scanner initializes it and does not send email
-  - if latest tag differs from `last_seen_tag`, scanner sends email to active subscribers and updates `last_seen_tag`
+  - if latest tag differs from `last_seen_tag`, scanner sends email to active
+    subscribers and updates `last_seen_tag`
 - SMTP notifier is enabled only when all required SMTP variables are provided
 - `POST /api/subscribe` sends a confirmation email with links to:
   - `GET /confirm/{token}` (UX page)
@@ -205,7 +208,8 @@ OpenAPI contract is available in [swagger.yaml](./swagger.yaml).
 
 ## gRPC interface (optional extra)
 
-- Proto file: [proto/release_notification.proto](./proto/release_notification.proto)
+- Proto file:
+  [proto/release_notification.proto](./proto/release_notification.proto)
 - gRPC server runs in the same monolith process as REST API.
 - Default port: `50051` (`GRPC_PORT` env var).
 - Implemented RPC methods:
@@ -279,7 +283,11 @@ Healthcheck endpoint:
 - Drizzle migrations executed on startup
 - Production data hosted on Neon
 
-![Neon Database](./assets/06-neon-database.png)
+![Neon Database](./assets/06-neon-database1.png)
+
+![Neon Database](./assets/06-neon-database2.png)
+
+![Neon Database](./assets/06-neon-database3.png)
 
 ### 7) Redis cache (Upstash Redis)
 
