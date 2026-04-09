@@ -52,7 +52,7 @@ export class SmtpEmailNotifier implements EmailNotifier {
     releaseUrl: string;
   }): Promise<void> {
     try {
-      await this.sendMailWithTimeout({
+      await this.transporter.sendMail({
         from: this.from,
         to: input.to,
         subject: `New release in ${input.repository}: ${input.tagName}`,
@@ -76,7 +76,7 @@ export class SmtpEmailNotifier implements EmailNotifier {
     unsubscribeUrl: string;
   }): Promise<void> {
     try {
-      await this.sendMailWithTimeout({
+      await this.transporter.sendMail({
         from: this.from,
         to: input.to,
         subject: `Confirm subscription for ${input.repository}`,
@@ -96,19 +96,6 @@ export class SmtpEmailNotifier implements EmailNotifier {
       recordEmailNotification({ type: 'confirmation', result: 'failed' });
       throw error;
     }
-  }
-
-  private async sendMailWithTimeout(
-    message: nodemailer.SendMailOptions
-  ): Promise<void> {
-    await Promise.race([
-      this.transporter.sendMail(message).then(() => undefined),
-      new Promise<never>((_, reject) => {
-        setTimeout(() => {
-          reject(new Error('SMTP send timeout exceeded.'));
-        }, SmtpEmailNotifier.SEND_TIMEOUT_MS);
-      }),
-    ]);
   }
 }
 

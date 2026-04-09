@@ -63,7 +63,8 @@ export function registerSubscriptionRoutes(
     } catch (error) {
       const message =
         error instanceof AppError ? error.message : 'Internal server error.';
-      res.status(200).type('html').send(
+      const statusCode = error instanceof AppError ? error.statusCode : 500;
+      res.status(statusCode).type('html').send(
         renderFlowPage({
           title: 'Confirmation Failed',
           message,
@@ -87,7 +88,8 @@ export function registerSubscriptionRoutes(
     } catch (error) {
       const message =
         error instanceof AppError ? error.message : 'Internal server error.';
-      res.status(200).type('html').send(
+      const statusCode = error instanceof AppError ? error.statusCode : 500;
+      res.status(statusCode).type('html').send(
         renderFlowPage({
           title: 'Unsubscribe Failed',
           message,
