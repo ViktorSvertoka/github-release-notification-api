@@ -113,12 +113,12 @@ curl -X POST "https://<your-render-service>.onrender.com/api/subscribe" \
 ```
 
 2. Open confirmation email from your SMTP inbox and click:
-   `GET /api/confirm/{token}`.
+   `GET /confirm/{token}` (browser UX route).
 3. Wait for scanner interval (or temporarily set `SCAN_INTERVAL_SECONDS=60` in
    Render for faster test).
 4. Publish/check a repository with a new release tag and verify release email
    is delivered.
-5. Click `GET /api/unsubscribe/{token}` and confirm notifications stop.
+5. Click `GET /unsubscribe/{token}` and confirm notifications stop.
 
 ## Environment variables
 
@@ -163,8 +163,21 @@ Core variables:
   - if latest tag differs from `last_seen_tag`, scanner sends email to active subscribers and updates `last_seen_tag`
 - SMTP notifier is enabled only when all required SMTP variables are provided
 - `POST /api/subscribe` sends a confirmation email with links to:
+  - `GET /confirm/{token}` (UX page)
+  - `GET /unsubscribe/{token}` (UX page)
+
+## REST contract vs UX routes
+
+- Contract endpoints (OpenAPI, machine/API usage):
+  - `POST /api/subscribe`
   - `GET /api/confirm/{token}`
   - `GET /api/unsubscribe/{token}`
+  - `GET /api/subscriptions?email={email}`
+- Browser UX wrappers:
+  - `GET /confirm/{token}` -> renders styled confirmation result page
+  - `GET /unsubscribe/{token}` -> renders styled unsubscribe result page
+- UX routes call the same business logic as `/api/*`; they are additive and do
+  not change Swagger contracts.
 
 ## API key auth (optional)
 
@@ -173,6 +186,8 @@ Core variables:
 - Public exceptions (no API key required):
   - `GET /api/confirm/{token}`
   - `GET /api/unsubscribe/{token}`
+- Note: browser UX routes `/confirm/{token}` and `/unsubscribe/{token}` are
+  outside `/api/*` and remain public.
 
 ## Prometheus metrics
 
@@ -215,3 +230,77 @@ grpcurl -plaintext \
 Healthcheck endpoint:
 
 `GET /health`
+
+## Main Features
+
+### 1) Home page
+
+- Responsive landing page for release subscriptions
+- Clean UX flow with inline validation and status messages
+- Connected to `POST /api/subscribe`
+
+![Home](./assets/01-home.png)
+
+### 2) Confirmation email
+
+- HTML email template with clear CTA buttons
+- Includes both confirmation and unsubscribe links
+- Sent via SMTP provider (Mailtrap Transactional / production SMTP)
+
+![Confirmation Email](./assets/02-confirmation-email.png)
+
+### 3) Confirm subscription flow
+
+- Browser-friendly confirmation page (`/confirm/:token`)
+- Activates subscription status in database
+- Styled success/error UI for non-technical users
+
+![Confirm Subscription](./assets/03-confirm-subscription.png)
+
+### 4) Unsubscribe flow
+
+- Browser-friendly unsubscribe page (`/unsubscribe/:token`)
+- Safely deactivates subscription
+- Styled success/error UX
+
+![Unsubscribe](./assets/04-unsubscribe.png)
+
+### 5) Production deployment (Render)
+
+- Monolith deployed and running on Render
+- Healthcheck and API endpoints available publicly
+- Runtime environment configured via environment variables
+
+![Render Deployment](./assets/05-render-deployment.png)
+
+### 6) PostgreSQL database (Neon)
+
+- Persistent storage for repositories/subscriptions/deliveries
+- Drizzle migrations executed on startup
+- Production data hosted on Neon
+
+![Neon Database](./assets/06-neon-database.png)
+
+### 7) Redis cache (Upstash Redis)
+
+- GitHub API response caching with TTL = 10 minutes
+- Reduces external API calls and improves stability
+- Used for repository existence and release lookup optimization
+
+![Redis Cache](./assets/07-redis-cache.png)
+
+### 8) Prometheus metrics
+
+- `/metrics` endpoint exposed for observability
+- Includes HTTP, scanner, email, and GitHub rate-limit metrics
+- Ready for Prometheus scraping and dashboarding
+
+![Prometheus Metrics](./assets/08-prometheus-metrics.png)
+
+### 9) CI pipeline (GitHub Actions)
+
+- Automated lint and unit tests on every push and pull request
+- Prevents regressions before merge
+- Enforces baseline code quality checks
+
+![GitHub Actions CI](./assets/09-github-actions-ci.png)
