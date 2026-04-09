@@ -327,3 +327,13 @@ Healthcheck endpoint:
 - Enforces baseline code quality checks
 
 ![GitHub Actions CI](./assets/10-github-actions-ci.png)
+
+### 11) Swagger API documentation
+
+- OpenAPI contract visualized in Swagger Editor
+- Includes all required subscription endpoints and schemas
+- Used for API contract verification and reviewer-friendly navigation
+
+![Swagger Documentation](./assets/11-swagger-documentation1.png)
+
+![Swagger Documentation](./assets/11-swagger-documentation2.png)
