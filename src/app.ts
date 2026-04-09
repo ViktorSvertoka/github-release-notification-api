@@ -75,6 +75,18 @@ export function createApp(dependencies: CreateAppDependencies) {
 }
 
 function normalizeRoute(pathname: string): string {
+  const fixedRoutes = new Set([
+    '/',
+    '/health',
+    '/metrics',
+    '/api/subscribe',
+    '/api/subscriptions',
+  ]);
+
+  if (fixedRoutes.has(pathname)) {
+    return pathname;
+  }
+
   if (/^\/api\/confirm\/[^/]+$/.test(pathname)) {
     return '/api/confirm/:token';
   }
@@ -83,5 +95,5 @@ function normalizeRoute(pathname: string): string {
     return '/api/unsubscribe/:token';
   }
 
-  return pathname;
+  return 'unmatched';
 }

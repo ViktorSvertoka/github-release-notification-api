@@ -22,38 +22,48 @@ export class ReleaseScanner {
   ) {}
 
   public async runOnce(): Promise<void> {
-    const tracked = await this.subscriptionRepository.listTrackedRepositories();
-    let hasFailures = false;
+    let outcome: 'success' | 'partial_failure' | 'rate_limited' = 'success';
+    try {
+      const tracked = await this.subscriptionRepository.listTrackedRepositories();
+      let hasFailures = false;
 
-    for (const item of tracked) {
-      try {
-        const release = await this.gitHubClient.getLatestRelease(item.repository);
-        const hadDeliveryFailure = await this.handleRepositoryRelease(
-          item,
-          release
-        );
-        if (hadDeliveryFailure) {
-          hasFailures = true;
-        }
-      } catch (error) {
-        if (error instanceof RateLimitError) {
-          this.logger.warn(
-            { repository: item.repository, error: error.message },
-            'Release scan skipped due to GitHub rate limit'
+      for (const item of tracked) {
+        try {
+          const release = await this.gitHubClient.getLatestRelease(item.repository);
+          const hadDeliveryFailure = await this.handleRepositoryRelease(
+            item,
+            release
           );
-          recordScannerRun('rate_limited');
-          return;
+          if (hadDeliveryFailure) {
+            hasFailures = true;
+          }
+        } catch (error) {
+          if (error instanceof RateLimitError) {
+            this.logger.warn(
+              { repository: item.repository, error: error.message },
+              'Release scan skipped due to GitHub rate limit'
+            );
+            outcome = 'rate_limited';
+            return;
+          }
+
+          hasFailures = true;
+          this.logger.error(
+            { repository: item.repository, error },
+            'Release scan failed for repository'
+          );
         }
-
-        hasFailures = true;
-        this.logger.error(
-          { repository: item.repository, error },
-          'Release scan failed for repository'
-        );
       }
-    }
 
-    recordScannerRun(hasFailures ? 'partial_failure' : 'success');
+      if (hasFailures) {
+        outcome = 'partial_failure';
+      }
+    } catch (error) {
+      outcome = 'partial_failure';
+      throw error;
+    } finally {
+      recordScannerRun(outcome);
+    }
   }
 
   private async handleRepositoryRelease(
